@@ -1,6 +1,6 @@
 -- made by Gemini AI
 -- Dear ImGui(ReGui) Small Remake Source By Altis
--- [[ V3.3 add Label:SetTitle("New Title") function ]]
+-- [[ V3.3 add Label:SetTitle("New Title") function, Make Resize Corner Bigger ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -157,16 +157,16 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     ContentArea.ZIndex = 1
     ContentArea.Parent = MainFrame
 
-    local ResizeHandle = Instance.new("TextButton")
-    ResizeHandle.Size = UDim2.new(0, 20, 0, 20)
-    ResizeHandle.Position = UDim2.new(1, -10, 1, -10)
-    ResizeHandle.BackgroundTransparency = 1
-    ResizeHandle.Text = "◢"
-    ResizeHandle.Font = Enum.Font.Code
-    ResizeHandle.TextSize = 20
-    ResizeHandle.TextColor3 = Color3.fromRGB(150, 150, 150)
-    ResizeHandle.ZIndex = 10
-    ResizeHandle.Parent = MainFrame
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Size = UDim2.new(0, 25, 0, 25) -- Tăng kích thước vùng bấm từ 15x15 lên 25x25
+ResizeHandle.Position = UDim2.new(1, -25, 1, -25) -- Cập nhật lại vị trí tương ứng với size mới
+ResizeHandle.BackgroundTransparency = 1
+ResizeHandle.Text = "◢"
+ResizeHandle.Font = Enum.Font.Code
+ResizeHandle.TextSize = 25 -- Tăng cỡ chữ từ 14 lên 22 để biểu tượng trông bự và rõ ràng hơn
+ResizeHandle.TextColor3 = Color3.fromRGB(150, 150, 150)
+ResizeHandle.ZIndex = 10
+ResizeHandle.Parent = MainFrame
 
     local WindowState = { Minimized = false, PreSize = defaultSize }
     
