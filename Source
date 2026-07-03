@@ -1,10 +1,6 @@
 -- made by Gemini AI
-
---[[
-    ImGui/Iris Style UI Library for Roblox (V3.2)
-    - Fixed: All ScrollingFrames now have CanvasSize set to (0,0,0,0) with AutomaticCanvasSize for perfect dynamic scaling.
-    - Features: Resize Corner, Transparency Fix, Search Filter, Multi-Tabs, Collapsible Sections.
---]]
+-- Dear ImGui(ReGui) Small Remake Source By Altis
+-- [[ V3.3 add Label:SetTitle("New Title") function ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -162,12 +158,12 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     ContentArea.Parent = MainFrame
 
     local ResizeHandle = Instance.new("TextButton")
-    ResizeHandle.Size = UDim2.new(0, 15, 0, 15)
-    ResizeHandle.Position = UDim2.new(1, -15, 1, -15)
+    ResizeHandle.Size = UDim2.new(0, 20, 0, 20)
+    ResizeHandle.Position = UDim2.new(1, -10, 1, -10)
     ResizeHandle.BackgroundTransparency = 1
     ResizeHandle.Text = "◢"
     ResizeHandle.Font = Enum.Font.Code
-    ResizeHandle.TextSize = 14
+    ResizeHandle.TextSize = 20
     ResizeHandle.TextColor3 = Color3.fromRGB(150, 150, 150)
     ResizeHandle.ZIndex = 10
     ResizeHandle.Parent = MainFrame
@@ -317,11 +313,22 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 RegisterTheme(function(theme) Div.BackgroundColor3 = theme.Border; Div.BackgroundTransparency = theme.ElementTransparency end)
             end
 
-            function Elements:CreateLabel(text)
-                local Label = Instance.new("TextLabel", container)
-                Label.Size = UDim2.new(1, -8, 0, 15); Label.BackgroundTransparency = 1; Label.Text = text; Label.Font = Enum.Font.Code; Label.TextSize = 13; Label.TextXAlignment = Enum.TextXAlignment.Left
-                RegisterTheme(function(theme) Label.TextColor3 = theme.Text end); RegisterElement(Label, text); return Label
-            end
+function Elements:CreateLabel(text)
+    local Label = Instance.new("TextLabel", container)
+    Label.Size = UDim2.new(1, -8, 0, 15); Label.BackgroundTransparency = 1; Label.Text = text; Label.Font = Enum.Font.Code; Label.TextSize = 13; Label.TextXAlignment = Enum.TextXAlignment.Left
+    RegisterTheme(function(theme) Label.TextColor3 = theme.Text end); RegisterElement(Label, text)
+    
+    -- Thêm hàm tùy biến này vào để gọi trực tiếp
+    local LabelHandler = {}
+    function LabelHandler:SetTitle(newText)
+        Label.Text = newText
+    end
+    function LabelHandler:SetText(newText) -- Thêm SetText cho đa dạng cú pháp
+        Label.Text = newText
+    end
+    
+    return LabelHandler
+end
 
             function Elements:CreateButton(text, callback)
                 local Btn = Instance.new("TextButton", container)
