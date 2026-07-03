@@ -1,0 +1,185 @@
+-- Tải thư viện từ link mới của bạn
+local IrisLib = loadstring(game:HttpGet("https://pastefy.app/SK2sHBIm/raw"))()
+
+-- Khởi tạo Window ở giữa màn hình với kích thước mặc định khá rộng để chứa nhiều element
+local Window = IrisLib.CreateWindow("Ultimate Debug & Stress Test v3.1", UDim2.new(0, 600, 0, 450))
+
+-- Thiết lập màu chủ đạo mặc định (Đỏ Cam ImGui)
+Window:SetMainColor(Color3.fromRGB(235, 90, 40))
+
+-- Thông báo khi chạy script thành công
+Window:SendNotification("Thử Nghiệm Thư Viện", "Đang chạy full stress-test script...", 4)
+
+-- =====================================================================
+-- TAB 1: 🖥️ CORE SETTINGS (Chuyên test Hệ thống Giao diện & Ảnh nền)
+-- =====================================================================
+local CoreTab = Window:CreateTab("Core Settings")
+
+CoreTab:CreateLabel("--- KIỂM TRA ĐỘ TRONG SUỐT VÀ HÌNH NỀN ---")
+
+CoreTab:CreateButton("Bật Ảnh Nền Mẫu (Anime)", function()
+    Window:SetBackgroundImage("rbxassetid://111612290258829")
+    Window:SendNotification("Background Image", "Đã áp dụng ảnh nền thành công!", 2)
+end)
+
+CoreTab:CreateButton("Xóa Ảnh Nền", function()
+    Window:SetBackgroundImage("")
+    Window:SendNotification("Background Image", "Đã gỡ bỏ ảnh nền!", 2)
+end)
+
+CoreTab:CreateSlider("Độ Trong Suốt UI (Opacity)", "Core_UiOpacity", 0, 100, 40, function(value)
+    Window:SetBackgroundTransparency(value / 100)
+end)
+
+CoreTab:CreateSlider("Độ Trong Suốt Ảnh Nền", "Core_ImgOpacity", 0, 100, 30, function(value)
+    Window:SetBackgroundImageTransparency(value / 100)
+end)
+
+CoreTab:CreateDivider()
+CoreTab:CreateLabel("--- KIỂM TRA ĐỔI MÀU GIAO DIỆN CHỦ ĐẠO ---")
+
+CoreTab:CreateColorPicker("Thay Đổi Accent Color", "Core_ThemeColor", Color3.fromRGB(235, 90, 40), function(newColor)
+    Window:SetMainColor(newColor)
+end)
+
+CoreTab:CreateButton("Gửi Notification Test", function()
+    Window:SendNotification("Test Alert", "Hệ thống Notification vẫn hoạt động ổn định!", 3)
+end)
+
+
+-- =====================================================================
+-- TAB 2: ⚔️ COMBAT & AIM (Test Toggles, Keybinds, Sliders nâng cao)
+-- =====================================================================
+local CombatTab = Window:CreateTab("Combat & Aim")
+
+-- Thử nghiệm phần tử Section (Thu gọn/Mở rộng)
+local AimbotSection = CombatTab:CreateSection("Cấu Hình Ngắm (Aimbot Settings)")
+
+AimbotSection:CreateToggle("Kích Hoạt Aimbot", "Aim_Enabled", false, function(state)
+    print("Aimbot Status:", state)
+end)
+
+AimbotSection:CreateKeybind("Phím Giữ Khóa Mục Tiêu", "Aim_Bind", Enum.KeyCode.E, function(key, isPressed)
+    if isPressed then
+        print("Đang giữ phím ngắm:", key.Name)
+    else
+        print("Đã đổi/nhận diện phím ngắm:", key.Name)
+    end
+end)
+
+AimbotSection:CreateSlider("Độ Mượt (Smoothness)", "Aim_Smooth", 1, 30, 5, function(v)
+    print("Smooth changed to:", v)
+end)
+
+AimbotSection:CreateSlider("Bán Kính Quét (FOV Radius)", "Aim_Fov", 10, 800, 150, function(v)
+    print("FOV changed to:", v)
+end)
+
+AimbotSection:CreateColorPicker("Màu Vòng Tròn FOV", "Aim_FovColor", Color3.fromRGB(255, 255, 255), function(color)
+    print("FOV Color changed")
+end)
+
+-- Tạo thêm một Section khác trong cùng tab để xem có bị đè chữ không
+local TargetSection = CombatTab:CreateSection("Ưu Tiên Mục Tiêu (Targeting)")
+
+TargetSection:CreateDropdown("Chế Độ Chọn Mục Tiêu", "Aim_TargetMode", {"Gần Nhất", "Máu Thấp Nhất", "Cấp Cao Nhất", "Bị Tổn Thương"}, "Gần Nhất", function(selected)
+    print("Target Mode Selected:", selected)
+end)
+
+TargetSection:CreateToggle("Bỏ Qua Đồng Đội (Team Check)", "Aim_TeamCheck", true, function(state) end)
+TargetSection:CreateToggle("Kiểm Tra Tường (Wall Check)", "Aim_WallCheck", false, function(state) end)
+
+
+-- =====================================================================
+-- TAB 3: 👁️ VISUALS & ESP (Test ColorPickers và Dropdowns số lượng lớn)
+-- =====================================================================
+local VisualsTab = Window:CreateTab("Visuals & ESP")
+
+VisualsTab:CreateLabel("Test lỗi trong suốt của Dropdown & Colorpicker tại đây:")
+
+local PlayerEspSec = VisualsTab:CreateSection("Người Chơi (Player ESP)")
+
+PlayerEspSec:CreateToggle("Bật Khung ESP Box", "Esp_Box", false, function(s) end)
+PlayerEspSec:CreateColorPicker("Màu Khung Box", "Esp_BoxColor", Color3.fromRGB(255, 0, 0), function(c) end)
+
+PlayerEspSec:CreateToggle("Bật Tên Người Chơi (Name)", "Esp_Name", false, function(s) end)
+PlayerEspSec:CreateColorPicker("Màu Chữ Tên", "Esp_NameColor", Color3.fromRGB(255, 255, 255), function(c) end)
+
+PlayerEspSec:CreateToggle("Bật Đường Kẻ (Tracers)", "Esp_Tracers", false, function(s) end)
+PlayerEspSec:CreateDropdown("Vị Trí Xuất Phát Tracers", "Esp_TracerOrigin", {"Dưới Cùng", "Giữa Màn Hình", "Trên Cùng"}, "Dưới Cùng", function(sel) end)
+PlayerEspSec:CreateColorPicker("Màu Đường Kẻ Tracers", "Esp_TracerColor", Color3.fromRGB(0, 255, 255), function(c) end)
+
+local WorldSec = VisualsTab:CreateSection("Thế Giới (World Mods)")
+WorldSec:CreateToggle("Làm Sáng Hang Động (Fullbright)", "World_Bright", false, function(s) end)
+WorldSec:CreateSlider("Tốc Độ Thời Gian (Time Ambient)", "World_Time", 0, 24, 12, function(v) end)
+
+
+-- =====================================================================
+-- TAB 4: 🗺️ MISC & TELEPORT (Test TextBox, Hàm Refresh Dropdown nâng cao)
+-- =====================================================================
+local MiscTab = Window:CreateTab("Misc & Teleport")
+
+local PlayerModSec = MiscTab:CreateSection("Thuộc Tính Nhân Vật")
+
+PlayerModSec:CreateSlider("Tốc Độ Chạy (WalkSpeed)", "Mod_Speed", 16, 250, 16, function(v)
+    pcall(function() game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v end)
+end)
+
+PlayerModSec:CreateSlider("Độ Cao Nhảy (JumpPower)", "Mod_Jump", 50, 500, 50, function(v)
+    pcall(function() game.Players.LocalPlayer.Character.Humanoid.JumpPower = v end)
+end)
+
+PlayerModSec:CreateToggle("Nhảy Vô Hạn (Infinite Jump)", "Mod_InfJump", false, function(state) end)
+
+local TeleportSec = MiscTab:CreateSection("Hệ Thống Tọa Độ (Waypoints)")
+
+local currentWaypoints = {"Nhà Chính", "Khu Khai Thác", "Shop Vũ Khí"}
+
+-- Tạo Dropdown trước
+local WaypointDropdown = TeleportSec:CreateDropdown("Chọn Điểm Dịch Chuyển", "Misc_WpList", currentWaypoints, "Nhà Chính", function(selected)
+    print("Đang dịch chuyển tới:", selected)
+end)
+
+-- TextBox nhập tên điểm mới
+local NewWpName = ""
+TeleportSec:CreateTextBox("Tên Điểm Cần Lưu", "Misc_NewWpBox", "Nhập tên điểm tại đây...", function(text, enterPressed)
+    NewWpName = text
+    print("Tên điểm đã lưu trữ tạm thời:", text)
+end)
+
+-- Button thêm điểm và làm mới dropdown (Test tính năng Refresh của Dropdown)
+TeleportSec:CreateButton("💾 Lưu Vị Trí Hiện Tại Vào Danh Sách", function()
+    if NewWpName ~= "" then
+        table.insert(currentWaypoints, NewWpName)
+        WaypointDropdown:Refresh(currentWaypoints) -- Gọi hàm refresh
+        Window:SendNotification("Thành Công", "Đã thêm điểm '"..NewWpName.."' vào Dropdown!", 2)
+    else
+        Window:SendNotification("Cảnh Báo", "Hãy gõ tên điểm vào ô TextBox trước!", 3)
+    end
+end)
+
+
+-- =====================================================================
+-- TAB 5: 🔥 STRESS TEST & SEARCH (Test khả năng cuộn trang và tìm kiếm)
+-- =====================================================================
+local StressTab = Window:CreateTab("Stress & Search")
+
+StressTab:CreateLabel("Tab này chứa cực nhiều Element trùng lặp.")
+StressTab:CreateLabel("Mục đích: Test xem thanh cuộn (Scrollbar) có bị mượt không.")
+StressTab:CreateLabel("Hãy thử gõ chữ 'Khác' hoặc 'Nút' vào ô Search phía trên!")
+
+for i = 1, 10 do
+    StressTab:CreateButton("Nút Bấm Thử Nghiệm Số " .. tostring(i), function() 
+        print("Bấm nút stress-test:", i)
+    end)
+end
+
+StressTab:CreateDivider()
+
+for i = 1, 5 do
+    StressTab:CreateToggle("Lựa Chọn Khác Thứ " .. tostring(i), "Stress_Toggle_"..tostring(i), false, function(s) end)
+    StressTab:CreateTextBox("Hộp Nhập Dữ Liệu Khác " .. tostring(i), "Stress_Box_"..tostring(i), "Nhập text test...", function(t) end)
+end
+
+StressTab:CreateLabel("--- KẾT THÚC BẢN SCRIPT KHẢO SÁT ---")
+
