@@ -15,7 +15,11 @@ Window:SendNotification("Thử Nghiệm Thư Viện", "Đang chạy full stress-
 -- =====================================================================
 local CoreTab = Window:CreateTab("Core Settings")
 
-CoreTab:CreateLabel("--- KIỂM TRA ĐỘ TRONG SUỐT VÀ HÌNH NỀN ---")
+local TestLabel = CoreTab:CreateLabel("--- KIỂM TRA ĐỘ TRONG SUỐT VÀ HÌNH NỀN ---")
+
+CoreTab:CreateButton("Đổi tên label ở trên", function()
+    TestLabel:SetTitle("Title mới!")
+end)
 
 CoreTab:CreateButton("Bật Ảnh Nền Mẫu (Anime)", function()
     Window:SetBackgroundImage("rbxassetid://111612290258829")
