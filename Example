@@ -1,8 +1,8 @@
--- Tải thư viện từ link mới của bạn
-local IrisLib = loadstring(game:HttpGet("https://pastefy.app/SK2sHBIm/raw"))()
+-- Dear ImGui(ReGui) Remake By Gemini AI
+local IrisLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Altis-DEV/Altis-UiLibrary/refs/heads/main/Source"))()
 
 -- Khởi tạo Window ở giữa màn hình với kích thước mặc định khá rộng để chứa nhiều element
-local Window = IrisLib.CreateWindow("Ultimate Debug & Stress Test v3.1", UDim2.new(0, 600, 0, 450))
+local Window = IrisLib.CreateWindow("Dear ImGui(Regui) Small Remake Example", UDim2.new(0, 600, 0, 450))
 
 -- Thiết lập màu chủ đạo mặc định (Đỏ Cam ImGui)
 Window:SetMainColor(Color3.fromRGB(235, 90, 40))
@@ -27,11 +27,11 @@ CoreTab:CreateButton("Xóa Ảnh Nền", function()
     Window:SendNotification("Background Image", "Đã gỡ bỏ ảnh nền!", 2)
 end)
 
-CoreTab:CreateSlider("Độ Trong Suốt UI (Opacity)", "Core_UiOpacity", 0, 100, 40, function(value)
+CoreTab:CreateSlider("Độ Trong Suốt UI (Opacity)", "Core_UiOpacity", 0, 100, 0, function(value)
     Window:SetBackgroundTransparency(value / 100)
 end)
 
-CoreTab:CreateSlider("Độ Trong Suốt Ảnh Nền", "Core_ImgOpacity", 0, 100, 30, function(value)
+CoreTab:CreateSlider("Độ Trong Suốt Ảnh Nền", "Core_ImgOpacity", 0, 100, 0, function(value)
     Window:SetBackgroundImageTransparency(value / 100)
 end)
 
