@@ -1,5 +1,6 @@
 -- made by Gemini AI
--- [[ V3.6: ResizeHandle "◢" size increased to 35 and color synced with MainColor (Accent) ]]
+-- [[ FIX LOGIC: Dropdown standard now dynamically updates Accent Color on selection ]]
+-- [[ V3.6/3.7: ResizeHandle "◢" size is 35 and color synced with MainColor ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -161,7 +162,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     ResizeHandle.BackgroundTransparency = 1
     ResizeHandle.Text = "◢"
     ResizeHandle.Font = Enum.Font.Code
-    ResizeHandle.TextSize = 35 -- ĐÃ FIX: Tăng size lên 35
+    ResizeHandle.TextSize = 35
     ResizeHandle.ZIndex = 10
     ResizeHandle.Parent = MainFrame
 
@@ -242,7 +243,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         MainFrame.BackgroundColor3 = theme.WindowBg; MainFrame.BackgroundTransparency = theme.ElementTransparency; MainFrame.BorderColor3 = theme.Border
         TopBar.BackgroundColor3 = theme.TopBar; SearchBox.BackgroundColor3 = theme.ElementBg; SearchBox.BorderColor3 = theme.Border; SearchBox.TextColor3 = theme.Text; SearchBox.BackgroundTransparency = theme.ElementTransparency
         TabScroll.BackgroundColor3 = theme.WindowBg; TabScroll.BackgroundTransparency = theme.ElementTransparency; TabScroll.BorderColor3 = theme.Border
-        ResizeHandle.TextColor3 = theme.Accent -- ĐÃ FIX: Đồng bộ màu với MainColor
+        ResizeHandle.TextColor3 = theme.Accent
     end)
     WindowObj:SetMainColor(Color3.fromRGB(60, 100, 180))
 
@@ -452,14 +453,26 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
                 local function refreshOptions()
                     DropArea:ClearAllChildren(); local L = Instance.new("UIListLayout", DropArea); L.SortOrder = Enum.SortOrder.LayoutOrder
+                    local OptButtons = {} -- BẢN SỬA LỖI: Lưu mảng nút để cập nhật lại màu
+                    
                     for _, opt in ipairs(options) do
                         local OBtn = Instance.new("TextButton", DropArea); OBtn.Size = UDim2.new(1, -4, 0, 20); OBtn.BorderSizePixel = 0; OBtn.Text = tostring(opt); OBtn.Font = Enum.Font.Code; OBtn.TextSize = 12
+                        table.insert(OptButtons, {Btn = OBtn, Value = opt})
+
                         RegisterTheme(function(theme) 
                             OBtn.BackgroundColor3 = (selected == opt) and theme.Accent or theme.ElementBg; OBtn.TextColor3 = theme.Text
                             OBtn.BackgroundTransparency = theme.ElementTransparency
                         end)
                         OBtn.MouseButton1Click:Connect(function()
                             selected = opt; ToggleBtn.Text = " ► " .. text .. " [" .. tostring(opt) .. "]"
+                            
+                            -- CẬP NHẬT TRỰC TIẾP MÀU KHI ĐƯỢC CHỌN LẠI
+                            if WindowObj.Theme.Accent then
+                                for _, data in ipairs(OptButtons) do
+                                    data.Btn.BackgroundColor3 = (selected == data.Value) and WindowObj.Theme.Accent or WindowObj.Theme.ElementBg
+                                end
+                            end
+
                             callback(opt); open = false
                             Tween(Frame, {Size = UDim2.new(1, -8, 0, 22)}, 0.2)
                         end)
