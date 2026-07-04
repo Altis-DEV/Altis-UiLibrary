@@ -600,15 +600,11 @@ Dropdown:Refresh({"Base", "Shop", "Mine"})
 
 ---
 
-## Version 3.7 Notes
+## Version 3.8 Notes
 
-The README is written to match the **AltisLib V3.7 showcase style**.
+The README is written to match the **AltisLib V3.8 showcase style**.
 
-Important UI patterns used in V3.7:
+Important UI patterns used in V3.8:
 
-- `Label:SetText(...)` updates label text dynamically.
-- `Dropdown:Refresh(...)` replaces dropdown options at runtime.
-- `MultiDropdown:Refresh(...)` replaces multi-select options at runtime.
-- `Section` works as a container for all standard elements.
-- Background transparency and image transparency accept values from `0` to `1`.
-- `SendNotification(...)` is useful for runtime feedback and testing.
+- `CreateDropdown` fixed not show slected value color
+- update smart search bar
