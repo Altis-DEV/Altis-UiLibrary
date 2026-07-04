@@ -1,6 +1,6 @@
 --[[
     ========================================================
-    AltisLib V3.7 - Official Full Showcase & Testing Script
+    AltisLib V3.8 - Official Full Showcase & Testing Script
     ========================================================
     Use this script to test all UI elements, layout behaviors,
     color pickers, dynamic updates, and scrollbars.
@@ -11,7 +11,7 @@ local IrisLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Altis
 
 -- [2] Create Main Window
 -- Arguments: Title, Default Size (Width, Height)
-local Window = IrisLib.CreateWindow("AltisLib Showcase V3.7", UDim2.new(0, 550, 0, 400))
+local Window = IrisLib.CreateWindow("AltisLib Showcase V3.8", UDim2.new(0, 550, 0, 400))
 
 -- [3] Window Modifiers & Theme Testing
 Window:SetMainColor(Color3.fromRGB(85, 170, 255)) -- Light Blue Theme
