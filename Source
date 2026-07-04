@@ -1,6 +1,5 @@
 -- made by Gemini AI
--- [[ FIX LOGIC: Dropdown standard now dynamically updates Accent Color on selection ]]
--- [[ V3.6/3.7: ResizeHandle "◢" size is 35 and color synced with MainColor ]]
+-- [[ V3.8: Fixed Dropdown Not Show Selected Value Color,Upgrade Smart Search Bar ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -209,11 +208,38 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         Theme = { ElementTransparency = 0 }
     }
 
+    -- TÍNH NĂNG SEARCH BAR ĐÃ NÂNG CẤP
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local query = SearchBox.Text:lower()
+        local sectionsToOpen = {}
+
         for _, el in pairs(WindowObj.ElementsCache) do
             if el.Tab == WindowObj.CurrentTab then
-                el.Frame.Visible = (query == "" or el.Text:find(query))
+                if query == "" then
+                    el.Frame.Visible = true
+                else
+                    -- Bỏ qua các element không có text (như Divider)
+                    local isMatch = (el.Text ~= "" and el.Text:find(query) ~= nil)
+                    el.Frame.Visible = isMatch
+                    
+                    -- Nếu element khớp và nó nằm trong Section, lưu Section đó lại để mở
+                    if isMatch and el.Section then
+                        sectionsToOpen[el.Section] = true
+                    end
+                end
+            end
+        end
+
+        -- Buộc mở (Force Open) tất cả các Section chứa Element được tìm thấy
+        if query ~= "" then
+            for sec, _ in pairs(sectionsToOpen) do
+                local curr = sec
+                -- Dò ngược lên nếu có Section lồng trong Section
+                while curr do
+                    curr.Frame.Visible = true
+                    curr.ForceOpen()
+                    curr = curr.ParentSection
+                end
             end
         end
     end)
@@ -306,14 +332,25 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         if #WindowObj.Tabs == 0 then WindowObj.CurrentTab = tabName; TabPage.Visible = true end
         table.insert(WindowObj.Tabs, {Button = TabButton, Page = TabPage})
 
-        local function AppendElements(container)
+        -- Truyền tham số parentSection để hệ thống theo dõi phân cấp
+        local function AppendElements(container, parentSection)
             local Elements = {}
-            local function RegisterElement(frame, text) table.insert(WindowObj.ElementsCache, {Frame = frame, Text = text:lower(), Tab = tabName}) end
+            
+            local function RegisterElement(frame, text) 
+                text = text or ""
+                table.insert(WindowObj.ElementsCache, {
+                    Frame = frame, 
+                    Text = text:lower(), 
+                    Tab = tabName, 
+                    Section = parentSection 
+                }) 
+            end
 
             function Elements:CreateDivider()
                 local Div = Instance.new("Frame", container)
                 Div.Size = UDim2.new(1, -8, 0, 1); Div.BorderSizePixel = 0
                 RegisterTheme(function(theme) Div.BackgroundColor3 = theme.Border; Div.BackgroundTransparency = theme.ElementTransparency end)
+                RegisterElement(Div, "") -- Gửi chuỗi rỗng để không bị search dính
             end
 
             function Elements:CreateLabel(text)
@@ -453,7 +490,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
                 local function refreshOptions()
                     DropArea:ClearAllChildren(); local L = Instance.new("UIListLayout", DropArea); L.SortOrder = Enum.SortOrder.LayoutOrder
-                    local OptButtons = {} -- BẢN SỬA LỖI: Lưu mảng nút để cập nhật lại màu
+                    local OptButtons = {} 
                     
                     for _, opt in ipairs(options) do
                         local OBtn = Instance.new("TextButton", DropArea); OBtn.Size = UDim2.new(1, -4, 0, 20); OBtn.BorderSizePixel = 0; OBtn.Text = tostring(opt); OBtn.Font = Enum.Font.Code; OBtn.TextSize = 12
@@ -466,7 +503,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                         OBtn.MouseButton1Click:Connect(function()
                             selected = opt; ToggleBtn.Text = " ► " .. text .. " [" .. tostring(opt) .. "]"
                             
-                            -- CẬP NHẬT TRỰC TIẾP MÀU KHI ĐƯỢC CHỌN LẠI
                             if WindowObj.Theme.Accent then
                                 for _, data in ipairs(OptButtons) do
                                     data.Btn.BackgroundColor3 = (selected == data.Value) and WindowObj.Theme.Accent or WindowObj.Theme.ElementBg
@@ -724,12 +760,25 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
                 SecBtn.MouseButton1Click:Connect(function() open = not open; updateSec() end)
                 SecLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() if open then updateSec() end end)
-                RegisterElement(SecFrame, text); return AppendElements(SecContent)
+                
+                -- Tạo Object cho Section để SearchBar gọi hàm ép mở
+                local SecObj = {
+                    Frame = SecFrame,
+                    ParentSection = parentSection,
+                    ForceOpen = function()
+                        if not open then
+                            open = true
+                            updateSec()
+                        end
+                    end
+                }
+
+                RegisterElement(SecFrame, text); return AppendElements(SecContent, SecObj)
             end
 
             return Elements
         end
-        return AppendElements(TabPage)
+        return AppendElements(TabPage, nil)
     end
     return WindowObj
 end
