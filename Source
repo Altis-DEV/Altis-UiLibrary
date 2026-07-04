@@ -1,5 +1,5 @@
 -- made by Gemini AI
--- [[ V3.4: Removed Flag System completely, Added CreateMultiDropdown ]]
+-- [[ V3.5: Fixed Tab Names, Fixed ColorPicker Black Screen, Redesigned TextBox layout ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -267,7 +267,12 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
     function WindowObj:CreateTab(tabName)
         local TabButton = Instance.new("TextButton", TabScroll)
-        TabButton.Name = tabName .. "_Tab"; TabButton.BorderSizePixel = 1; TabButton.Font = Enum.Font.Code; TabButton.TextSize = 13
+        TabButton.Name = tabName .. "_Tab"
+        TabButton.Text = tabName -- ĐÃ FIX: Hiển thị đúng tên tab
+        TabButton.BorderSizePixel = 1
+        TabButton.Font = Enum.Font.Code
+        TabButton.TextSize = 13
+        
         local TextBounds = game:GetService("TextService"):GetTextSize(tabName, 13, Enum.Font.Code, Vector2.new(math.huge, 30))
         TabButton.Size = UDim2.new(0, TextBounds.X + 20, 1, -4)
 
@@ -384,21 +389,45 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 RegisterElement(Frame, text)
             end
 
+            -- ĐÃ FIX & THIẾT KẾ LẠI: Textbox chia đôi màn hình (Label bên trái, Input bên phải)
             function Elements:CreateTextBox(text, placeholder, callback)
                 placeholder = placeholder or "Enter text..."
                 local Frame = Instance.new("Frame", container)
-                Frame.Size = UDim2.new(1, -8, 0, 38); Frame.BackgroundTransparency = 1
+                Frame.Size = UDim2.new(1, -8, 0, 22)
+                Frame.BackgroundTransparency = 1
+                
                 local Label = Instance.new("TextLabel", Frame)
-                Label.Size = UDim2.new(1, 0, 0, 15); Label.BackgroundTransparency = 1; Label.Text = text; Label.Font = Enum.Font.Code; Label.TextSize = 13; Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.Size = UDim2.new(0.5, -5, 1, 0)
+                Label.BackgroundTransparency = 1
+                Label.Text = text
+                Label.Font = Enum.Font.Code
+                Label.TextSize = 13
+                Label.TextXAlignment = Enum.TextXAlignment.Left
+                
                 local TBox = Instance.new("TextBox", Frame)
-                TBox.Size = UDim2.new(1, 0, 0, 20); TBox.Position = UDim2.new(0, 0, 0, 18); TBox.BorderSizePixel = 1; TBox.Text = ""; TBox.PlaceholderText = placeholder; TBox.Font = Enum.Font.Code; TBox.TextSize = 12; TBox.ClearTextOnFocus = false
+                TBox.Size = UDim2.new(0.5, 5, 1, 0)
+                TBox.Position = UDim2.new(0.5, 0, 0, 0)
+                TBox.BorderSizePixel = 1
+                TBox.Text = ""
+                TBox.PlaceholderText = placeholder
+                TBox.Font = Enum.Font.Code
+                TBox.TextSize = 12
+                TBox.ClearTextOnFocus = false
 
                 RegisterTheme(function(theme)
-                    Label.TextColor3 = theme.Text; TBox.BackgroundColor3 = theme.ElementBg; TBox.BorderColor3 = theme.Border; TBox.TextColor3 = theme.Text
+                    Label.TextColor3 = theme.Text
+                    TBox.BackgroundColor3 = theme.ElementBg
+                    TBox.BorderColor3 = theme.Border
+                    TBox.TextColor3 = theme.Text
                     TBox.BackgroundTransparency = theme.ElementTransparency
                 end)
+                
                 TBox.FocusLost:Connect(function(enter) callback(TBox.Text, enter) end)
                 RegisterElement(Frame, text)
+                
+                local handler = {}
+                function handler:SetText(newText) TBox.Text = newText end
+                return handler
             end
 
             function Elements:CreateDropdown(text, options, default, callback)
@@ -636,9 +665,10 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
 
                 local r, g, b = tempColor.R*255, tempColor.G*255, tempColor.B*255
-                local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v) r = v; tempColor = Color3.fromRGB(r/255,g/255,b/255); ColorDisplay.BackgroundColor3 = tempColor end)
-                local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v) g = v; tempColor = Color3.fromRGB(r/255,g/255,b/255); ColorDisplay.BackgroundColor3 = tempColor end)
-                local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v) b = v; tempColor = Color3.fromRGB(r/255,g/255,b/255); ColorDisplay.BackgroundColor3 = tempColor end)
+                -- ĐÃ FIX: Color3.fromRGB chỉ nhận 0-255 nên truyền thẳng r, g, b vào (không chia cho 255 nữa)
+                local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v) r = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
+                local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v) g = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
+                local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v) b = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
 
                 local CancelBtn = Instance.new("TextButton", DropArea); CancelBtn.Size = UDim2.new(0.4, 0, 0, 20); CancelBtn.Position = UDim2.new(0.05, 0, 0, 80); CancelBtn.Text = "Cancel"; CancelBtn.BorderSizePixel = 1; CancelBtn.Font = Enum.Font.Code; CancelBtn.TextSize = 13
                 local ApplyBtn = Instance.new("TextButton", DropArea); ApplyBtn.Size = UDim2.new(0.4, 0, 0, 20); ApplyBtn.Position = UDim2.new(0.55, 0, 0, 80); ApplyBtn.Text = "Apply"; ApplyBtn.BorderSizePixel = 1; ApplyBtn.Font = Enum.Font.Code; ApplyBtn.TextSize = 13
@@ -652,7 +682,15 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
                 local function toggle() open = not open; ToggleBtn.Text = (open and " ▼ " or " ► ") .. text; Tween(Frame, {Size = UDim2.new(1, -8, 0, open and 130 or 22)}, 0.25) end
                 ToggleBtn.MouseButton1Click:Connect(toggle)
-                CancelBtn.MouseButton1Click:Connect(function() tempColor = color; ColorDisplay.BackgroundColor3 = tempColor; r,g,b = tempColor.R*255,tempColor.G*255,tempColor.B*255; setR(math.floor(r)); setG(math.floor(g)); setB(math.floor(b)); toggle() end)
+                
+                CancelBtn.MouseButton1Click:Connect(function() 
+                    tempColor = color; 
+                    ColorDisplay.BackgroundColor3 = tempColor; 
+                    r,g,b = tempColor.R*255, tempColor.G*255, tempColor.B*255; 
+                    setR(math.floor(r)); setG(math.floor(g)); setB(math.floor(b)); 
+                    toggle() 
+                end)
+                
                 ApplyBtn.MouseButton1Click:Connect(function() color = tempColor; callback(color); toggle() end)
                 RegisterElement(Frame, text)
             end
