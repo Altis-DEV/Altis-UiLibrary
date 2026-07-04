@@ -1,5 +1,4 @@
 -- made by Gemini AI
--- Dear ImGui(ReGui) Small Remake Source By Altis
 -- [[ V3.3 add Label:SetTitle("New Title") function, Make Resize Corner Bigger ]]
 
 local UserInputService = game:GetService("UserInputService")
