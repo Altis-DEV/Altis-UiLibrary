@@ -369,7 +369,81 @@ Creates a collapsible section.
 ```lua
 local Section = Tab:CreateSection("Settings")
 ```
+#### You can make elements in a Section
 
+The following elements are supported inside a Section:
+
+- Label
+- Button
+- Toggle
+- Slider
+- Dropdown
+- TextBox
+- ColorPicker
+- Keybind
+- Divider
+
+#### Complete Section Example
+
+```lua
+local Section = Tab:CreateSection("Example Section")
+
+local Label = Section:CreateLabel("Example Label")
+
+Section:CreateButton("Button", function()
+    print("Clicked")
+end)
+
+Section:CreateToggle("Toggle", "ToggleKey", false, function(state)
+    print(state)
+end)
+
+Section:CreateSlider("Slider", "SliderKey", 0, 100, 50, function(value)
+    print(value)
+end)
+
+local Dropdown = Section:CreateDropdown(
+    "Dropdown",
+    "DropdownKey",
+    {"Option 1", "Option 2", "Option 3"},
+    "Option 1",
+    function(selected)
+        print(selected)
+    end
+)
+
+Section:CreateTextBox(
+    "TextBox",
+    "TextBoxKey",
+    "Type here...",
+    function(text)
+        print(text)
+    end
+)
+
+Section:CreateColorPicker(
+    "Color Picker",
+    "ColorKey",
+    Color3.fromRGB(255,255,255),
+    function(color)
+        print(color)
+    end
+)
+
+Section:CreateKeybind(
+    "Keybind",
+    "KeybindKey",
+    Enum.KeyCode.E,
+    function(key, pressed)
+        print(key.Name, pressed)
+    end
+)
+
+Section:CreateDivider()
+
+Label:SetTitle("Updated Label")
+Dropdown:Refresh({"New 1","New 2","New 3"})
+```
 ### `Tab:CreateLabel(text)`
 
 Creates a label.
