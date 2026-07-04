@@ -1,188 +1,167 @@
+--[[
+    ========================================================
+    AltisLib V3.7 - Official Full Showcase & Testing Script
+    ========================================================
+    Use this script to test all UI elements, layout behaviors,
+    color pickers, dynamic updates, and scrollbars.
+]]
+
+-- [1] Load the Library
 local IrisLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Altis-DEV/Altis-UiLibrary/refs/heads/main/Source"))()
 
--- Khởi tạo Window ở giữa màn hình với kích thước mặc định khá rộng để chứa nhiều element
-local Window = IrisLib.CreateWindow("Altis Ui Library Example", UDim2.new(0, 600, 0, 450))
+-- [2] Create Main Window
+-- Arguments: Title, Default Size (Width, Height)
+local Window = IrisLib.CreateWindow("AltisLib Showcase V3.7", UDim2.new(0, 550, 0, 400))
 
--- Thiết lập màu chủ đạo mặc định (Đỏ Cam ImGui)
-Window:SetMainColor(Color3.fromRGB(235, 90, 40))
+-- [3] Window Modifiers & Theme Testing
+Window:SetMainColor(Color3.fromRGB(85, 170, 255)) -- Light Blue Theme
+Window:SetBackgroundTransparency(0.15) -- Slight transparency
+Window:SendNotification("AltisLib Loaded", "Welcome to the V3.5 Showcase!", 5)
 
--- Thông báo khi chạy script thành công
-Window:SendNotification("Thử Nghiệm Thư Viện", "Đang chạy full stress-test script...", 4)
+-- ========================================================================
+-- TAB 1: BASIC ELEMENTS & HANDLERS
+-- ========================================================================
+local BasicTab = Window:CreateTab("Basic Elements")
 
--- =====================================================================
--- TAB 1: 🖥️ CORE SETTINGS (Chuyên test Hệ thống Giao diện & Ảnh nền)
--- =====================================================================
-local CoreTab = Window:CreateTab("Core Settings")
+-- Testing Label & Updating its text dynamically
+local StatusLabel = BasicTab:CreateLabel("Status: Waiting for input...")
 
-local TestLabel = CoreTab:CreateLabel("--- KIỂM TRA ĐỘ TRONG SUỐT VÀ HÌNH NỀN ---")
+BasicTab:CreateDivider()
 
-CoreTab:CreateButton("Đổi tên label ở trên", function()
-    TestLabel:SetTitle("Title mới!")
+-- Testing Button
+BasicTab:CreateButton("Update Status Label", function()
+    StatusLabel:SetText("Status: Button clicked at " .. tostring(os.date("%X")))
+    Window:SendNotification("Button Clicked", "The label above has been updated.", 3)
+    print("[AltisLib] Button was clicked.")
 end)
 
-CoreTab:CreateButton("Bật Ảnh Nền Mẫu (Anime)", function()
-    Window:SetBackgroundImage("rbxassetid://111612290258829")
-    Window:SendNotification("Background Image", "Đã áp dụng ảnh nền thành công!", 2)
+-- Testing Toggle
+BasicTab:CreateToggle("Enable Auto-Farm", false, function(state)
+    print("[AltisLib] Toggle state changed to:", state)
 end)
 
-CoreTab:CreateButton("Xóa Ảnh Nền", function()
-    Window:SetBackgroundImage("")
-    Window:SendNotification("Background Image", "Đã gỡ bỏ ảnh nền!", 2)
+-- Testing Slider
+BasicTab:CreateSlider("WalkSpeed", 16, 100, 16, function(value)
+    print("[AltisLib] Slider value changed to:", value)
+    pcall(function()
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
+    end)
 end)
 
-CoreTab:CreateSlider("Độ Trong Suốt UI (Opacity)", "Core_UiOpacity", 0, 100, 0, function(value)
+-- Testing TextBox (V3.5 Redesigned Layout: Title Left, Input Right)
+local NameInput = BasicTab:CreateTextBox("Target Player", "Enter name...", function(text, enterPressed)
+    if enterPressed then
+        print("[AltisLib] TextBox submitted:", text)
+        Window:SendNotification("Target Selected", "Locked on: " .. text, 3)
+    end
+end)
+
+BasicTab:CreateButton("Clear TextBox", function()
+    NameInput:SetText("") -- Testing the handler to clear text
+end)
+
+
+-- ========================================================================
+-- TAB 2: DROPDOWNS & MULTI-SELECTIONS
+-- ========================================================================
+local SelectionTab = Window:CreateTab("Selectors")
+
+SelectionTab:CreateLabel("Standard Dropdown Testing:")
+
+-- Testing Dropdown
+local Weapons = {"Sword", "Pistol", "Shotgun", "Sniper", "Rocket", "Knife"}
+local WeaponDropdown = SelectionTab:CreateDropdown("Equip Weapon", Weapons, "Sword", function(selected)
+    print("[AltisLib] Dropdown selected:", selected)
+end)
+
+-- Testing Dropdown Refresh Handler
+SelectionTab:CreateButton("Refresh Weapon List", function()
+    WeaponDropdown:Refresh({"Updated_Gun1", "Updated_Gun2", "Updated_Gun3"})
+    Window:SendNotification("Refreshed", "Single Dropdown updated.", 2)
+end)
+
+SelectionTab:CreateDivider()
+
+SelectionTab:CreateLabel("Multi-Dropdown Testing:")
+
+-- Testing MultiDropdown
+local ESPFeatures = {"Boxes", "Names", "Health", "Distance", "Tracers", "Skeleton"}
+local ESPDropdown = SelectionTab:CreateMultiDropdown("ESP Settings", ESPFeatures, {"Boxes", "Names"}, function(selectedTable)
+    print("[AltisLib] Current MultiDropdown selections:")
+    for _, feature in ipairs(selectedTable) do
+        print(" - " .. feature)
+    end
+end)
+
+-- Testing MultiDropdown Refresh Handler
+SelectionTab:CreateButton("Refresh ESP List", function()
+    ESPDropdown:Refresh({"Enemies", "Teammates", "Loot", "Vehicles"})
+    Window:SendNotification("Refreshed", "Multi Dropdown updated.", 2)
+end)
+
+
+-- ========================================================================
+-- TAB 3: SECTIONS, COLORS & KEYBINDS
+-- ========================================================================
+local AdvancedTab = Window:CreateTab("Advanced")
+
+-- Testing Section (Expandable/Collapsible)
+local VisualSection = AdvancedTab:CreateSection("Visual Settings")
+
+-- Testing ColorPicker (V3.5 Fixed Black Screen Bug)
+VisualSection:CreateColorPicker("Accent Color", Color3.fromRGB(85, 170, 255), function(color)
+    print("[AltisLib] ColorPicker changed to:", color)
+    Window:SetMainColor(color) -- Dynamically updates the UI theme
+end)
+
+VisualSection:CreateColorPicker("ESP Box Color", Color3.fromRGB(255, 50, 50), function(color)
+    print("[AltisLib] ESP Color changed.")
+end)
+
+local CombatSection = AdvancedTab:CreateSection("Combat Settings")
+
+-- Testing Keybind
+CombatSection:CreateKeybind("Aimbot Hotkey", Enum.KeyCode.E, function(key, isPressed)
+    if isPressed then
+        print("[AltisLib] Aimbot triggered by key:", key.Name)
+    else
+        print("[AltisLib] Aimbot keybind changed to:", key.Name)
+    end
+end)
+
+
+-- ========================================================================
+-- TAB 4: WINDOW UI SETTINGS & STRESS TEST
+-- ========================================================================
+local SettingsTab = Window:CreateTab("Settings")
+
+SettingsTab:CreateLabel("Background Configuration:")
+
+-- Testing UI background transparency
+SettingsTab:CreateSlider("UI Transparency", 0, 100, 15, function(value)
     Window:SetBackgroundTransparency(value / 100)
 end)
 
-CoreTab:CreateSlider("Độ Trong Suốt Ảnh Nền", "Core_ImgOpacity", 0, 100, 0, function(value)
+SettingsTab:CreateDivider()
+
+-- Testing Image Background
+SettingsTab:CreateTextBox("Image Asset ID", "rbxassetid://10459322831", function(text, enterPressed)
+    if enterPressed then
+        Window:SetBackgroundImage(text)
+        Window:SendNotification("Background Updated", "Loaded image asset.", 3)
+    end
+end)
+
+SettingsTab:CreateSlider("Image Transparency", 0, 100, 50, function(value)
     Window:SetBackgroundImageTransparency(value / 100)
 end)
 
-CoreTab:CreateDivider()
-CoreTab:CreateLabel("--- KIỂM TRA ĐỔI MÀU GIAO DIỆN CHỦ ĐẠO ---")
+SettingsTab:CreateDivider()
+SettingsTab:CreateLabel("Scrollbar Stress Test:")
 
-CoreTab:CreateColorPicker("Thay Đổi Accent Color", "Core_ThemeColor", Color3.fromRGB(235, 90, 40), function(newColor)
-    Window:SetMainColor(newColor)
-end)
-
-CoreTab:CreateButton("Gửi Notification Test", function()
-    Window:SendNotification("Test Alert", "Hệ thống Notification vẫn hoạt động ổn định!", 3)
-end)
-
-
--- =====================================================================
--- TAB 2: ⚔️ COMBAT & AIM (Test Toggles, Keybinds, Sliders nâng cao)
--- =====================================================================
-local CombatTab = Window:CreateTab("Combat & Aim")
-
--- Thử nghiệm phần tử Section (Thu gọn/Mở rộng)
-local AimbotSection = CombatTab:CreateSection("Cấu Hình Ngắm (Aimbot Settings)")
-
-AimbotSection:CreateToggle("Kích Hoạt Aimbot", "Aim_Enabled", false, function(state)
-    print("Aimbot Status:", state)
-end)
-
-AimbotSection:CreateKeybind("Phím Giữ Khóa Mục Tiêu", "Aim_Bind", Enum.KeyCode.E, function(key, isPressed)
-    if isPressed then
-        print("Đang giữ phím ngắm:", key.Name)
-    else
-        print("Đã đổi/nhận diện phím ngắm:", key.Name)
-    end
-end)
-
-AimbotSection:CreateSlider("Độ Mượt (Smoothness)", "Aim_Smooth", 1, 30, 5, function(v)
-    print("Smooth changed to:", v)
-end)
-
-AimbotSection:CreateSlider("Bán Kính Quét (FOV Radius)", "Aim_Fov", 10, 800, 150, function(v)
-    print("FOV changed to:", v)
-end)
-
-AimbotSection:CreateColorPicker("Màu Vòng Tròn FOV", "Aim_FovColor", Color3.fromRGB(255, 255, 255), function(color)
-    print("FOV Color changed")
-end)
-
--- Tạo thêm một Section khác trong cùng tab để xem có bị đè chữ không
-local TargetSection = CombatTab:CreateSection("Ưu Tiên Mục Tiêu (Targeting)")
-
-TargetSection:CreateDropdown("Chế Độ Chọn Mục Tiêu", "Aim_TargetMode", {"Gần Nhất", "Máu Thấp Nhất", "Cấp Cao Nhất", "Bị Tổn Thương"}, "Gần Nhất", function(selected)
-    print("Target Mode Selected:", selected)
-end)
-
-TargetSection:CreateToggle("Bỏ Qua Đồng Đội (Team Check)", "Aim_TeamCheck", true, function(state) end)
-TargetSection:CreateToggle("Kiểm Tra Tường (Wall Check)", "Aim_WallCheck", false, function(state) end)
-
-
--- =====================================================================
--- TAB 3: 👁️ VISUALS & ESP (Test ColorPickers và Dropdowns số lượng lớn)
--- =====================================================================
-local VisualsTab = Window:CreateTab("Visuals & ESP")
-
-VisualsTab:CreateLabel("Test lỗi trong suốt của Dropdown & Colorpicker tại đây:")
-
-local PlayerEspSec = VisualsTab:CreateSection("Người Chơi (Player ESP)")
-
-PlayerEspSec:CreateToggle("Bật Khung ESP Box", "Esp_Box", false, function(s) end)
-PlayerEspSec:CreateColorPicker("Màu Khung Box", "Esp_BoxColor", Color3.fromRGB(255, 0, 0), function(c) end)
-
-PlayerEspSec:CreateToggle("Bật Tên Người Chơi (Name)", "Esp_Name", false, function(s) end)
-PlayerEspSec:CreateColorPicker("Màu Chữ Tên", "Esp_NameColor", Color3.fromRGB(255, 255, 255), function(c) end)
-
-PlayerEspSec:CreateToggle("Bật Đường Kẻ (Tracers)", "Esp_Tracers", false, function(s) end)
-PlayerEspSec:CreateDropdown("Vị Trí Xuất Phát Tracers", "Esp_TracerOrigin", {"Dưới Cùng", "Giữa Màn Hình", "Trên Cùng"}, "Dưới Cùng", function(sel) end)
-PlayerEspSec:CreateColorPicker("Màu Đường Kẻ Tracers", "Esp_TracerColor", Color3.fromRGB(0, 255, 255), function(c) end)
-
-local WorldSec = VisualsTab:CreateSection("Thế Giới (World Mods)")
-WorldSec:CreateToggle("Làm Sáng Hang Động (Fullbright)", "World_Bright", false, function(s) end)
-WorldSec:CreateSlider("Tốc Độ Thời Gian (Time Ambient)", "World_Time", 0, 24, 12, function(v) end)
-
-
--- =====================================================================
--- TAB 4: 🗺️ MISC & TELEPORT (Test TextBox, Hàm Refresh Dropdown nâng cao)
--- =====================================================================
-local MiscTab = Window:CreateTab("Misc & Teleport")
-
-local PlayerModSec = MiscTab:CreateSection("Thuộc Tính Nhân Vật")
-
-PlayerModSec:CreateSlider("Tốc Độ Chạy (WalkSpeed)", "Mod_Speed", 16, 250, 16, function(v)
-    pcall(function() game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v end)
-end)
-
-PlayerModSec:CreateSlider("Độ Cao Nhảy (JumpPower)", "Mod_Jump", 50, 500, 50, function(v)
-    pcall(function() game.Players.LocalPlayer.Character.Humanoid.JumpPower = v end)
-end)
-
-PlayerModSec:CreateToggle("Nhảy Vô Hạn (Infinite Jump)", "Mod_InfJump", false, function(state) end)
-
-local TeleportSec = MiscTab:CreateSection("Hệ Thống Tọa Độ (Waypoints)")
-
-local currentWaypoints = {"Nhà Chính", "Khu Khai Thác", "Shop Vũ Khí"}
-
--- Tạo Dropdown trước
-local WaypointDropdown = TeleportSec:CreateDropdown("Chọn Điểm Dịch Chuyển", "Misc_WpList", currentWaypoints, "Nhà Chính", function(selected)
-    print("Đang dịch chuyển tới:", selected)
-end)
-
--- TextBox nhập tên điểm mới
-local NewWpName = ""
-TeleportSec:CreateTextBox("Tên Điểm Cần Lưu", "Misc_NewWpBox", "Nhập tên điểm tại đây...", function(text, enterPressed)
-    NewWpName = text
-    print("Tên điểm đã lưu trữ tạm thời:", text)
-end)
-
--- Button thêm điểm và làm mới dropdown (Test tính năng Refresh của Dropdown)
-TeleportSec:CreateButton("💾 Lưu Vị Trí Hiện Tại Vào Danh Sách", function()
-    if NewWpName ~= "" then
-        table.insert(currentWaypoints, NewWpName)
-        WaypointDropdown:Refresh(currentWaypoints) -- Gọi hàm refresh
-        Window:SendNotification("Thành Công", "Đã thêm điểm '"..NewWpName.."' vào Dropdown!", 2)
-    else
-        Window:SendNotification("Cảnh Báo", "Hãy gõ tên điểm vào ô TextBox trước!", 3)
-    end
-end)
-
-
--- =====================================================================
--- TAB 5: 🔥 STRESS TEST & SEARCH (Test khả năng cuộn trang và tìm kiếm)
--- =====================================================================
-local StressTab = Window:CreateTab("Stress & Search")
-
-StressTab:CreateLabel("Tab này chứa cực nhiều Element trùng lặp.")
-StressTab:CreateLabel("Mục đích: Test xem thanh cuộn (Scrollbar) có bị mượt không.")
-StressTab:CreateLabel("Hãy thử gõ chữ 'Khác' hoặc 'Nút' vào ô Search phía trên!")
-
-for i = 1, 10 do
-    StressTab:CreateButton("Nút Bấm Thử Nghiệm Số " .. tostring(i), function() 
-        print("Bấm nút stress-test:", i)
+-- Spawning 20 buttons to forcefully test the scrolling frame behavior
+for i = 1, 20 do
+    SettingsTab:CreateButton("Dummy Button " .. tostring(i), function()
+        print("Clicked dummy button", i)
     end)
 end
-
-StressTab:CreateDivider()
-
-for i = 1, 5 do
-    StressTab:CreateToggle("Lựa Chọn Khác Thứ " .. tostring(i), "Stress_Toggle_"..tostring(i), false, function(s) end)
-    StressTab:CreateTextBox("Hộp Nhập Dữ Liệu Khác " .. tostring(i), "Stress_Box_"..tostring(i), "Nhập text test...", function(t) end)
-end
-
-StressTab:CreateLabel("--- KẾT THÚC BẢN SCRIPT KHẢO SÁT ---")
-
