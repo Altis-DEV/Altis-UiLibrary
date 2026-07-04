@@ -1,5 +1,5 @@
 -- made by Gemini AI
--- [[ V3.5: Fixed Tab Names, Fixed ColorPicker Black Screen, Redesigned TextBox layout ]]
+-- [[ V3.6: ResizeHandle "◢" size increased to 35 and color synced with MainColor (Accent) ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -161,8 +161,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     ResizeHandle.BackgroundTransparency = 1
     ResizeHandle.Text = "◢"
     ResizeHandle.Font = Enum.Font.Code
-    ResizeHandle.TextSize = 25
-    ResizeHandle.TextColor3 = Color3.fromRGB(150, 150, 150)
+    ResizeHandle.TextSize = 35 -- ĐÃ FIX: Tăng size lên 35
     ResizeHandle.ZIndex = 10
     ResizeHandle.Parent = MainFrame
 
@@ -243,6 +242,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         MainFrame.BackgroundColor3 = theme.WindowBg; MainFrame.BackgroundTransparency = theme.ElementTransparency; MainFrame.BorderColor3 = theme.Border
         TopBar.BackgroundColor3 = theme.TopBar; SearchBox.BackgroundColor3 = theme.ElementBg; SearchBox.BorderColor3 = theme.Border; SearchBox.TextColor3 = theme.Text; SearchBox.BackgroundTransparency = theme.ElementTransparency
         TabScroll.BackgroundColor3 = theme.WindowBg; TabScroll.BackgroundTransparency = theme.ElementTransparency; TabScroll.BorderColor3 = theme.Border
+        ResizeHandle.TextColor3 = theme.Accent -- ĐÃ FIX: Đồng bộ màu với MainColor
     end)
     WindowObj:SetMainColor(Color3.fromRGB(60, 100, 180))
 
@@ -268,7 +268,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     function WindowObj:CreateTab(tabName)
         local TabButton = Instance.new("TextButton", TabScroll)
         TabButton.Name = tabName .. "_Tab"
-        TabButton.Text = tabName -- ĐÃ FIX: Hiển thị đúng tên tab
+        TabButton.Text = tabName
         TabButton.BorderSizePixel = 1
         TabButton.Font = Enum.Font.Code
         TabButton.TextSize = 13
@@ -389,7 +389,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 RegisterElement(Frame, text)
             end
 
-            -- ĐÃ FIX & THIẾT KẾ LẠI: Textbox chia đôi màn hình (Label bên trái, Input bên phải)
             function Elements:CreateTextBox(text, placeholder, callback)
                 placeholder = placeholder or "Enter text..."
                 local Frame = Instance.new("Frame", container)
@@ -665,7 +664,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
 
                 local r, g, b = tempColor.R*255, tempColor.G*255, tempColor.B*255
-                -- ĐÃ FIX: Color3.fromRGB chỉ nhận 0-255 nên truyền thẳng r, g, b vào (không chia cho 255 nữa)
                 local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v) r = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
                 local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v) g = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
                 local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v) b = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
