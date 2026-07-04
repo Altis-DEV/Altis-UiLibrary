@@ -55,16 +55,16 @@ end)
 
 ## Full Example
 
-This example follows the **AltisLib V3.7 Showcase** style and demonstrates the current API surface, including labels, buttons, toggles, sliders, dropdowns, sections, color pickers, keybinds, textboxes, background settings, and scrollbar stress testing.
+This example follows the **AltisLib V3.8 Showcase** style and demonstrates the current API surface, including labels, buttons, toggles, sliders, dropdowns, sections, color pickers, keybinds, textboxes, background settings, and scrollbar stress testing.
 
 ```lua
--- AltisLib V3.7 - Official Full Showcase & Testing Script
+-- AltisLib V3.8 - Official Full Showcase & Testing Script
 local AltisLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Altis-DEV/Altis-UiLibrary/refs/heads/main/Source"))()
 
-local Window = AltisLib.CreateWindow("AltisLib Showcase V3.7", UDim2.new(0, 550, 0, 400))
+local Window = AltisLib.CreateWindow("AltisLib Showcase V3.8", UDim2.new(0, 550, 0, 400))
 Window:SetMainColor(Color3.fromRGB(85, 170, 255))
 Window:SetBackgroundTransparency(0.15)
-Window:SendNotification("AltisLib Loaded", "Welcome to the V3.7 Showcase!", 5)
+Window:SendNotification("AltisLib Loaded", "Welcome to the V3.8 Showcase!", 5)
 
 local BasicTab = Window:CreateTab("Basic Elements")
 
