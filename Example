@@ -1,72 +1,116 @@
---[[
-    ========================================================
-    AltisLib V3.8 - Official Full Showcase & Testing Script
-    ========================================================
-    Use this script to test all UI elements, layout behaviors,
-    color pickers, dynamic updates, and scrollbars.
-]]
-
--- [1] Load the Library
+-- ======================================================= --
+-- DÁN ĐOẠN CODE NÀY BÊN DƯỚI SOURCE CODE CỦA ALTISLIB NHÉ --
+-- ======================================================= --
 local IrisLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Altis-DEV/Altis-UiLibrary/refs/heads/main/Source"))()
+-- Khởi tạo Cửa sổ giao diện chính
+local Window = IrisLib.CreateWindow("AltisLib V3.7 - Showcase", UDim2.new(0, 550, 0, 380))
 
--- [2] Create Main Window
--- Arguments: Title, Default Size (Width, Height)
-local Window = IrisLib.CreateWindow("AltisLib Showcase V3.8", UDim2.new(0, 550, 0, 400))
+-- ==========================================
+-- TAB 1: TÍNH NĂNG CHÍNH (MAIN FEATURES)
+-- ==========================================
+local MainTab = Window:CreateTab("Main Features")
 
--- [3] Window Modifiers & Theme Testing
-Window:SetMainColor(Color3.fromRGB(85, 170, 255)) -- Light Blue Theme
-Window:SetBackgroundTransparency(0.15) -- Slight transparency
-Window:SendNotification("AltisLib Loaded", "Welcome to the V3.5 Showcase!", 5)
+-- 1. [MỚI] Thử nghiệm Paragraph
+local WelcomePara = MainTab:CreateParagraph(
+    "👋 Chào mừng đến với AltisLib!", 
+    "Đây là tính năng Paragraph mới. Khung này sẽ tự động co giãn chiều cao theo độ dài của chữ. Rất thích hợp để làm Changelog, ghi chú, hoặc hướng dẫn sử dụng.\n\nCập nhật mới:\n- Thêm tính năng Smart Search Bar.\n- Thêm Paragraph tự co giãn.\n- Fix lỗi Dropdown."
+)
 
--- ========================================================================
--- TAB 1: BASIC ELEMENTS & HANDLERS
--- ========================================================================
-local BasicTab = Window:CreateTab("Basic Elements")
+MainTab:CreateDivider() -- Đường kẻ ngang
 
--- Testing Label & Updating its text dynamically
-local StatusLabel = BasicTab:CreateLabel("Status: Waiting for input...")
+-- 2. Thử nghiệm Section & Các Element cơ bản
+local CombatSection = MainTab:CreateSection("⚔️ Combat Settings")
 
-BasicTab:CreateDivider()
+CombatSection:CreateLabel("Đây là một Label bình thường")
 
--- Testing Button
-BasicTab:CreateButton("Update Status Label", function()
-    StatusLabel:SetText("Status: Button clicked at " .. tostring(os.date("%X")))
-    Window:SendNotification("Button Clicked", "The label above has been updated.", 3)
-    print("[AltisLib] Button was clicked.")
+CombatSection:CreateButton("Tấn công tự động (Click Me)", function()
+    Window:SendNotification("Thông báo", "Đã bật chế độ tấn công tự động!", 3)
 end)
 
--- Testing Toggle
-BasicTab:CreateToggle("Enable Auto-Farm", false, function(state)
-    print("[AltisLib] Toggle state changed to:", state)
-end)
-
--- Testing Slider
-BasicTab:CreateSlider("WalkSpeed", 16, 100, 16, function(value)
-    print("[AltisLib] Slider value changed to:", value)
-    pcall(function()
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
-    end)
-end)
-
--- Testing TextBox (V3.5 Redesigned Layout: Title Left, Input Right)
-local NameInput = BasicTab:CreateTextBox("Target Player", "Enter name...", function(text, enterPressed)
-    if enterPressed then
-        print("[AltisLib] TextBox submitted:", text)
-        Window:SendNotification("Target Selected", "Locked on: " .. text, 3)
+CombatSection:CreateToggle("Bật Aimbot", false, function(state)
+    print("Aimbot state:", state)
+    if state then
+        Window:SendNotification("Aimbot", "Đã khóa mục tiêu!", 2)
     end
 end)
 
-BasicTab:CreateButton("Clear TextBox", function()
-    NameInput:SetText("") -- Testing the handler to clear text
+CombatSection:CreateSlider("Phạm vi hoạt động (FOV)", 0, 360, 90, function(value)
+    print("FOV changed to:", value)
+end)
+
+-- 3. Thử nghiệm Section chứa Textbox và Dropdown
+local MiscSection = MainTab:CreateSection("🛠️ Misc Settings")
+
+MiscSection:CreateTextBox("Nhập tên người chơi", "Ví dụ: RobloxPlayer123", function(text, enterPressed)
+    if enterPressed then
+        Window:SendNotification("Tìm kiếm", "Đang tìm người chơi: " .. text, 3)
+    end
+end)
+
+MiscSection:CreateDropdown("Chọn vũ khí", {"Kiếm", "Súng", "Cung tên", "Dao găm"}, "Kiếm", function(selected)
+    print("Vũ khí được chọn:", selected)
+end)
+
+MiscSection:CreateMultiDropdown("Chọn Buff", {"Chạy nhanh", "Nhảy cao", "Tàng hình", "Bất tử"}, {"Chạy nhanh"}, function(selectedList)
+    print("Các Buff đang bật:")
+    for _, buff in ipairs(selectedList) do
+        print("-", buff)
+    end
 end)
 
 
--- ========================================================================
--- TAB 2: DROPDOWNS & MULTI-SELECTIONS
--- ========================================================================
-local SelectionTab = Window:CreateTab("Selectors")
+-- ==========================================
+-- TAB 2: CÀI ĐẶT GIAO DIỆN (THEME & CONFIG)
+-- ==========================================
+local SettingsTab = Window:CreateTab("Settings")
 
-SelectionTab:CreateLabel("Standard Dropdown Testing:")
+-- Dùng Paragraph nhưng không có text để làm Tiêu đề lớn
+SettingsTab:CreateParagraph("🎨 Tùy chỉnh giao diện", "")
+
+-- 4. ColorPicker để đổi màu UI
+SettingsTab:CreateColorPicker("Màu chủ đạo (Accent Color)", Color3.fromRGB(60, 100, 180), function(color)
+    Window:SetMainColor(color)
+end)
+
+-- 5. Slider để chỉnh độ mờ (Transparency)
+SettingsTab:CreateSlider("Độ trong suốt của UI", 0, 100, 0, function(value)
+    -- Chuyển đổi từ 0-100 sang 0-1 (để phù hợp với Gui Transparency)
+    Window:SetBackgroundTransparency(value / 100)
+end)
+
+SettingsTab:CreateDivider()
+
+-- 6. Keybind ẩn hiện giao diện (Ví dụ)
+SettingsTab:CreateKeybind("Phím tắt ẩn/hiện UI", Enum.KeyCode.RightShift, function(key, isTriggered)
+    if isTriggered then
+        -- Logic ẩn hiện UI bạn có thể thêm sau, ở đây ta in ra console
+        print("Đã bấm phím tắt:", key.Name)
+        Window:SendNotification("Keybind", "Bạn vừa bấm phím " .. key.Name, 2)
+    end
+end)
+
+-- 7. Nút Update Paragraph Test
+local UpdateBtn = SettingsTab:CreateButton("Cập nhật chữ của Paragraph bên Tab 1", function()
+    WelcomePara:SetTitle("⚠️ THÔNG BÁO ĐÃ BỊ THAY ĐỔI")
+    WelcomePara:SetText("Nội dung của Paragraph này đã được thay đổi bằng Script! Bạn có thể gọi SetTitle hoặc SetText bất cứ lúc nào.")
+end)
+
+
+-- ==========================================
+-- TAB 3: CREDITS
+-- ==========================================
+local CreditTab = Window:CreateTab("Credits")
+
+CreditTab:CreateParagraph("Nhà phát triển", "Giao diện được thiết kế và tinh chỉnh bởi bạn.\nCảm ơn vì đã sử dụng AltisLib!")
+CreditTab:CreateButton("Copy Link Discord", function()
+    -- Hàm copy (Yêu cầu executor hỗ trợ setclipboard)
+    if setclipboard then
+        setclipboard("https://discord.gg/your_link_here")
+        Window:SendNotification("Thành công", "Đã copy link Discord vào khay nhớ tạm!", 3)
+    else
+        Window:SendNotification("Lỗi", "Executor của bạn không hỗ trợ copy!", 3)
+    end
+end)
 
 -- Testing Dropdown
 local Weapons = {"Sword", "Pistol", "Shotgun", "Sniper", "Rocket", "Knife"}
