@@ -1,6 +1,6 @@
 -- =====================================================================
--- ALTIS UI LIBRARY - VERSION 3.9.1 (OFFICIAL FULL RELEASE)
--- FIX LOGIC: Dynamic Text Wrapping, Window Resizing, and Image Isolation
+-- ALTIS LIB V3.9.1 - FULL SOURCE CODE
+-- FIXES: TextWrapped dynamic resizing, ImageTransparency isolation
 -- =====================================================================
 
 local UserInputService = game:GetService("UserInputService")
@@ -10,19 +10,17 @@ local TextService = game:GetService("TextService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local IrisLib = {}
-IrisLib.__index = IrisLib
+local AltisLib = {}
+AltisLib.__index = AltisLib
 
--- Tìm phân vùng chứa UI phù hợp (Ưu tiên CoreGui nếu là Exploit)
-local TargetGuiParent = nil
-pcall(function()
-    TargetGuiParent = game:GetService("CoreGui")
-end)
-if not TargetGuiParent then
-    TargetGuiParent = LocalPlayer:WaitForChild("PlayerGui")
+-- Xác định vị trí Parent của UI
+local TargetGuiParent
+pcall(function() TargetGuiParent = game:GetService("CoreGui") end)
+if not TargetGuiParent then 
+    TargetGuiParent = LocalPlayer:WaitForChild("PlayerGui") 
 end
 
--- Hàm khởi tạo hiệu ứng Tween mượt mà
+-- Hàm hỗ trợ Tween
 local function Tween(obj, props, duration, easingStyle)
     duration = duration or 0.2
     easingStyle = easingStyle or Enum.EasingStyle.Quart
@@ -32,7 +30,7 @@ local function Tween(obj, props, duration, easingStyle)
     return tween
 end
 
--- Kiểm tra tín hiệu Input hợp lệ
+-- Kiểm tra Input hợp lệ (hỗ trợ cả PC và Mobile)
 local function IsValidInputBegan(input)
     return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
 end
@@ -41,60 +39,58 @@ local function IsValidInputChanged(input)
     return input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch
 end
 
--- Tính năng Kéo/Di chuyển Cửa sổ (Window Dragging)
+-- Kích hoạt kéo thả UI
 local function EnableDragging(dragFrame, hitFrame)
-    local dragging = false
-    local dragInput = nil
-    local dragStart = nil
-    local startPos = nil
-
+    local dragging, dragInput, dragStart, startPos
+    
     hitFrame.InputBegan:Connect(function(input)
         if IsValidInputBegan(input) then
             dragging = true
             dragStart = input.Position
             startPos = dragFrame.Position
-            
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
+                if input.UserInputState == Enum.UserInputState.End then 
+                    dragging = false 
                 end
             end)
         end
     end)
-
+    
     hitFrame.InputChanged:Connect(function(input)
-        if IsValidInputChanged(input) then
-            dragInput = input
+        if IsValidInputChanged(input) then 
+            dragInput = input 
         end
     end)
-
+    
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
             dragFrame.Position = UDim2.new(
-                startPos.X.Scale, 
-                startPos.X.Offset + delta.X, 
-                startPos.Y.Scale, 
-                startPos.Y.Offset + delta.Y
+                startPos.X.Scale, startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
     end)
 end
 
--- =====================================================================
--- HÀM KHỞI TẠO CỬA SỔ CHÍNH (CREATE WINDOW)
--- =====================================================================
-function IrisLib.CreateWindow(titleText, defaultSize)
-    titleText = titleText or "ImGui Window"
+-- ==========================================
+-- KHỞI TẠO CỬA SỔ MENU
+-- ==========================================
+function AltisLib.CreateWindow(titleText, defaultSize)
+    titleText = titleText or "Altis Library"
     defaultSize = defaultSize or UDim2.new(0, 500, 0, 350)
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "Altis_Lib_" .. math.random(10000, 99999)
+    ScreenGui.Name = "Altis_UI_" .. HttpService:GenerateGUID(false)
     ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
+    ScreenGui.DisplayOrder = 100
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Parent = TargetGuiParent
 
-    -- Container chứa thông báo (Notification)
+    -- Container cho Notification
     local NotifContainer = Instance.new("Frame")
+    NotifContainer.Name = "NotificationContainer"
     NotifContainer.Size = UDim2.new(0, 250, 1, -20)
     NotifContainer.Position = UDim2.new(1, -260, 0, 10)
     NotifContainer.BackgroundTransparency = 1
@@ -107,16 +103,22 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     NotifLayout.Padding = UDim.new(0, 5)
     NotifLayout.Parent = NotifContainer
 
-    -- Khung Menu Chính
+    -- Main Window Frame
     local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
     MainFrame.Size = defaultSize
-    MainFrame.Position = UDim2.new(0.5, -defaultSize.X.Offset / 2, 0.5, -defaultSize.Y.Offset / 2) 
+    MainFrame.Position = UDim2.new(0.5, -defaultSize.X.Offset/2, 0.5, -defaultSize.Y.Offset/2) 
     MainFrame.BorderSizePixel = 1
     MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
 
-    -- Ảnh Nền Menu
+    local MainScale = Instance.new("UIScale")
+    MainScale.Scale = 1
+    MainScale.Parent = MainFrame
+
+    -- Background Image (Tách biệt độ mờ)
     local BgImage = Instance.new("ImageLabel")
+    BgImage.Name = "BackgroundImage"
     BgImage.Size = UDim2.new(1, 0, 1, 0)
     BgImage.BackgroundTransparency = 1
     BgImage.ImageTransparency = 1
@@ -124,26 +126,27 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     BgImage.ZIndex = 0
     BgImage.Parent = MainFrame
 
-    -- Thanh Tiêu Đề (TopBar)
+    -- Thanh TopBar
     local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
     TopBar.Size = UDim2.new(1, 0, 0, 25)
     TopBar.BorderSizePixel = 0
     TopBar.ZIndex = 2
     TopBar.Parent = MainFrame
 
     local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "Title"
     TitleLabel.Text = " " .. titleText
     TitleLabel.Size = UDim2.new(0.5, 0, 1, 0)
     TitleLabel.Font = Enum.Font.Code
-    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     TitleLabel.TextSize = 14
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.ZIndex = 3
     TitleLabel.Parent = TopBar
 
-    -- Hộp Tìm Kiếm (Search Box)
     local SearchBox = Instance.new("TextBox")
+    SearchBox.Name = "SearchBox"
     SearchBox.Size = UDim2.new(0, 120, 0, 19)
     SearchBox.Position = UDim2.new(1, -150, 0, 3)
     SearchBox.BorderSizePixel = 1
@@ -155,20 +158,31 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     SearchBox.ZIndex = 3
     SearchBox.Parent = TopBar
 
-    -- Nút Thu Nhỏ (Minimize Button)
     local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Name = "Minimize"
     MinimizeBtn.Size = UDim2.new(0, 25, 0, 25)
     MinimizeBtn.Position = UDim2.new(1, -25, 0, 0)
     MinimizeBtn.BackgroundTransparency = 1
     MinimizeBtn.Text = "▼"
     MinimizeBtn.Font = Enum.Font.Code
-    MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     MinimizeBtn.TextSize = 14
     MinimizeBtn.ZIndex = 3
     MinimizeBtn.Parent = TopBar
 
-    -- Khu vực chứa Tab Ngang (Tab Scroller)
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "Close"
+    CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -50, 0, 0)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Text = "✕"
+    CloseBtn.Font = Enum.Font.Code
+    CloseBtn.TextSize = 14
+    CloseBtn.ZIndex = 3
+    CloseBtn.Parent = TopBar
+
+    -- Thanh chứa Tab
     local TabScroll = Instance.new("ScrollingFrame")
+    TabScroll.Name = "TabContainer"
     TabScroll.Size = UDim2.new(1, 0, 0, 30)
     TabScroll.Position = UDim2.new(0, 0, 0, 25)
     TabScroll.BorderSizePixel = 1
@@ -185,16 +199,18 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     TabScrollLayout.Padding = UDim.new(0, 2)
     TabScrollLayout.Parent = TabScroll
 
-    -- Khu vực chứa nội dung của Tab (Content Area)
+    -- Khu vực hiển thị Element
     local ContentArea = Instance.new("Frame")
+    ContentArea.Name = "ContentArea"
     ContentArea.Size = UDim2.new(1, 0, 1, -55)
     ContentArea.Position = UDim2.new(0, 0, 0, 55)
     ContentArea.BackgroundTransparency = 1
     ContentArea.ZIndex = 1
     ContentArea.Parent = MainFrame
 
-    -- Khung Kéo Giãn Cửa Sổ (Resize Corner Handle)
+    -- Nút Resize Góc
     local ResizeHandle = Instance.new("TextButton")
+    ResizeHandle.Name = "ResizeCorner"
     ResizeHandle.Size = UDim2.new(0, 25, 0, 25)
     ResizeHandle.Position = UDim2.new(1, -25, 1, -25)
     ResizeHandle.BackgroundTransparency = 1
@@ -204,6 +220,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     ResizeHandle.ZIndex = 10
     ResizeHandle.Parent = MainFrame
 
+    -- Logic Kéo Cửa Sổ & Resize & Thu Nhỏ
     local WindowState = { Minimized = false, PreSize = defaultSize }
     
     MinimizeBtn.MouseButton1Click:Connect(function()
@@ -220,13 +237,13 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         end
     end)
 
+    CloseBtn.MouseButton1Click:Connect(function()
+        WindowObj:SetVisible(false, true)
+    end)
+
     EnableDragging(MainFrame, TopBar)
 
-    -- Xử lý Logic kéo giãn kích thước UI
-    local resizing = false
-    local resizeStart = nil
-    local startSize = nil
-
+    local resizing, resizeStart, startSize
     ResizeHandle.InputBegan:Connect(function(input)
         if IsValidInputBegan(input) then
             resizing = true
@@ -239,7 +256,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
             end)
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
         if resizing and IsValidInputChanged(input) then
             local delta = input.Position - resizeStart
@@ -249,16 +265,76 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         end
     end)
 
-    -- Khởi tạo Object Window
+    -- Window Object
     local WindowObj = {
         Tabs = {}, 
         CurrentTab = nil, 
         ThemeCallbacks = {}, 
         ElementsCache = {},
-        Theme = { ElementTransparency = 0 }
+        Theme = { ElementTransparency = 0 },
+        GuiInstance = ScreenGui,
+        MainFrame = MainFrame,
+        MainScale = MainScale,
+        CloseButton = CloseBtn,
+        MinimizeButton = MinimizeBtn
     }
 
-    -- Hệ thống Lọc / Tìm kiếm cấu trúc phần tử (Search Engine)
+    local function UpdateElementCacheText(frame, newText)
+        local lowered = (newText or ""):lower()
+        for _, el in ipairs(WindowObj.ElementsCache) do
+            if el.Frame == frame then
+                el.Text = lowered
+            end
+        end
+    end
+
+    local function MeasureWrappedHeight(text, font, textSize, width)
+        width = math.max(1, math.floor(width or 1))
+        local bounds = TextService:GetTextSize(text or "", textSize, font, Vector2.new(width, math.huge))
+        return math.ceil(bounds.Y)
+    end
+
+    function WindowObj:Destroy()
+        self.GuiInstance:Destroy()
+    end
+
+    function WindowObj:SetVisible(visible, animate)
+        visible = visible ~= false
+        animate = animate ~= false
+        if visible then
+            self.GuiInstance.Enabled = true
+            self.MainFrame.Visible = true
+            if animate then
+                self.MainScale.Scale = 0.96
+                self.MainFrame.BackgroundTransparency = math.clamp(self.Theme.ElementTransparency + 0.08, 0, 1)
+                Tween(self.MainScale, {Scale = 1}, 0.18)
+                Tween(self.MainFrame, {BackgroundTransparency = self.Theme.ElementTransparency}, 0.18)
+            else
+                self.MainScale.Scale = 1
+                self.MainFrame.BackgroundTransparency = self.Theme.ElementTransparency
+            end
+        else
+            local function finishClose()
+                self.MainFrame.Visible = false
+                self.GuiInstance.Enabled = false
+            end
+            if animate then
+                local t1 = Tween(self.MainScale, {Scale = 0.96}, 0.16)
+                Tween(self.MainFrame, {BackgroundTransparency = 1}, 0.16)
+                t1.Completed:Connect(function()
+                    finishClose()
+                end)
+            else
+                finishClose()
+            end
+        end
+    end
+
+    function WindowObj:ToggleVisible(animate)
+        self:SetVisible(not self.MainFrame.Visible, animate)
+    end
+
+    -- Logic Thanh Search
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local query = SearchBox.Text:lower()
         local sectionsToOpen = {}
@@ -268,7 +344,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 if query == "" then
                     el.Frame.Visible = true
                 else
-                    local isMatch = (el.Text ~= "" and el.Text:find(query, 1, true) ~= nil)
+                    local isMatch = (el.Text ~= "" and el.Text:find(query) ~= nil)
                     el.Frame.Visible = isMatch
                     if isMatch and el.Section then 
                         sectionsToOpen[el.Section] = true 
@@ -276,7 +352,8 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
             end
         end
-
+        
+        -- Mở các section chứa kết quả tìm kiếm
         if query ~= "" then
             for sec, _ in pairs(sectionsToOpen) do
                 local curr = sec
@@ -289,28 +366,22 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         end
     end)
 
-    -- =====================================================================
-    -- WINDOW METHODS
-    -- =====================================================================
+    -- Các hàm tùy chỉnh giao diện
     function WindowObj:SetBackgroundImage(assetId) 
-        if type(assetId) == "number" then
-            BgImage.Image = "rbxassetid://" .. assetId
-        else
-            BgImage.Image = assetId
-        end
+        BgImage.Image = assetId 
     end
-
+    
     function WindowObj:SetBackgroundImageTransparency(val) 
         BgImage.ImageTransparency = math.clamp(val, 0, 1) 
     end
-
+    
     function WindowObj:SetBackgroundTransparency(value)
         self.Theme.ElementTransparency = math.clamp(value, 0, 1)
         for _, cb in ipairs(self.ThemeCallbacks) do 
             cb(self.Theme) 
         end
     end
-
+    
     function WindowObj:SetMainColor(color)
         local h, s, v = color:ToHSV()
         self.Theme = {
@@ -329,22 +400,25 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
     local function RegisterTheme(callback)
         table.insert(WindowObj.ThemeCallbacks, callback)
-        if WindowObj.Theme.Accent then 
-            callback(WindowObj.Theme) 
-        end
+        if WindowObj.Theme.Accent then callback(WindowObj.Theme) end
     end
 
+    -- Áp dụng theme cơ bản
     RegisterTheme(function(theme)
         MainFrame.BackgroundColor3 = theme.WindowBg
         MainFrame.BackgroundTransparency = theme.ElementTransparency
         MainFrame.BorderColor3 = theme.Border
         
         TopBar.BackgroundColor3 = theme.TopBar
+        TitleLabel.TextColor3 = theme.Text
         
         SearchBox.BackgroundColor3 = theme.ElementBg
         SearchBox.BorderColor3 = theme.Border
         SearchBox.TextColor3 = theme.Text
         SearchBox.BackgroundTransparency = theme.ElementTransparency
+        
+        MinimizeBtn.TextColor3 = theme.Accent
+        CloseBtn.TextColor3 = theme.Accent
         
         TabScroll.BackgroundColor3 = theme.WindowBg
         TabScroll.BackgroundTransparency = theme.ElementTransparency
@@ -353,23 +427,26 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         ResizeHandle.TextColor3 = theme.Accent
     end)
     
-    -- Đặt màu mặc định ban đầu
-    WindowObj:SetMainColor(Color3.fromRGB(60, 100, 180))
+    WindowObj:SetMainColor(Color3.fromRGB(60, 100, 180)) -- Default Color
 
-    -- Hệ thống tạo Thông báo (Notification System)
+    WindowObj:SetVisible(true, false)
+
+    -- ==========================================
+    -- HỆ THỐNG THÔNG BÁO (NOTIFICATION)
+    -- ==========================================
     function WindowObj:SendNotification(title, text, duration)
         local Wrapper = Instance.new("Frame")
         Wrapper.Size = UDim2.new(1, 0, 0, 0)
         Wrapper.BackgroundTransparency = 1
         Wrapper.ClipsDescendants = true
         Wrapper.Parent = NotifContainer
-
+        
         local Notif = Instance.new("Frame")
         Notif.Size = UDim2.new(1, 0, 1, 0)
         Notif.Position = UDim2.new(1, 50, 0, 0)
         Notif.BorderSizePixel = 1
         Notif.Parent = Wrapper
-
+        
         local TitleLbl = Instance.new("TextLabel")
         TitleLbl.Size = UDim2.new(1, -10, 0, 20)
         TitleLbl.Position = UDim2.new(0, 10, 0, 5)
@@ -379,7 +456,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         TitleLbl.TextSize = 14
         TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
         TitleLbl.Parent = Notif
-
+        
         local TextLbl = Instance.new("TextLabel")
         TextLbl.Size = UDim2.new(1, -10, 1, -25)
         TextLbl.Position = UDim2.new(0, 10, 0, 25)
@@ -391,7 +468,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         TextLbl.TextXAlignment = Enum.TextXAlignment.Left
         TextLbl.TextYAlignment = Enum.TextYAlignment.Top
         TextLbl.Parent = Notif
-
+        
         RegisterTheme(function(theme) 
             Notif.BackgroundColor3 = theme.WindowBg
             Notif.BackgroundTransparency = theme.ElementTransparency
@@ -399,26 +476,27 @@ function IrisLib.CreateWindow(titleText, defaultSize)
             TitleLbl.TextColor3 = theme.Accent
             TextLbl.TextColor3 = theme.Text 
         end)
-
-        Tween(Wrapper, UDim2.new(1, 0, 0, 60), 0.4)
+        
+        Tween(Wrapper, {Size = UDim2.new(1, 0, 0, 60)}, 0.4)
         Tween(Notif, {Position = UDim2.new(0, 0, 0, 0)}, 0.4)
-
+        
         task.spawn(function()
             task.wait(duration or 3)
             local slideOut = Tween(Notif, {Position = UDim2.new(1, 260, 0, 0)}, 0.4)
             slideOut.Completed:Wait()
-            local collapse = Tween(Wrapper, UDim2.new(1, 0, 0, 0), 0.3)
+            local collapse = Tween(Wrapper, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
             collapse.Completed:Wait()
             Wrapper:Destroy()
         end)
     end
 
-    -- =====================================================================
-    -- HÀM TẠO TAB NÊN (CREATE TAB)
-    -- =====================================================================
+    -- ==========================================
+    -- HỆ THỐNG TẠO TABS VÀ ELEMENTS
+    -- ==========================================
     function WindowObj:CreateTab(tabName)
         local TabButton = Instance.new("TextButton")
         TabButton.Name = tabName .. "_Tab"
+        TabButton.LayoutOrder = #WindowObj.Tabs + 1
         TabButton.Text = tabName
         TabButton.BorderSizePixel = 1
         TabButton.Font = Enum.Font.Code
@@ -430,6 +508,11 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
         local TabPage = Instance.new("ScrollingFrame")
         TabPage.Name = tabName .. "_Page"
+        local TabPadding = Instance.new("UIPadding")
+        TabPadding.PaddingTop = UDim.new(0, 4)
+        TabPadding.PaddingBottom = UDim.new(0, 4)
+        TabPadding.PaddingLeft = UDim.new(0, 4)
+        TabPadding.PaddingRight = UDim.new(0, 4)
         TabPage.Size = UDim2.new(1, -10, 1, -10)
         TabPage.Position = UDim2.new(0, 5, 0, 5)
         TabPage.BackgroundTransparency = 1
@@ -441,6 +524,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         TabPage.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
         TabPage.Visible = false
         TabPage.Parent = ContentArea
+        TabPadding.Parent = TabPage
         
         local PageLayout = Instance.new("UIListLayout")
         PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -451,11 +535,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
             TabButton.BorderColor3 = theme.Border
             TabButton.TextColor3 = theme.Text
             TabButton.BackgroundTransparency = theme.ElementTransparency
-            if WindowObj.CurrentTab == tabName then
-                TabButton.BackgroundColor3 = theme.Accent
-            else
-                TabButton.BackgroundColor3 = theme.ElementBg
-            end
+            TabButton.BackgroundColor3 = (WindowObj.CurrentTab == tabName) and theme.Accent or theme.ElementBg
         end)
 
         TabButton.MouseButton1Click:Connect(function()
@@ -464,22 +544,24 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 t.Page.Visible = false 
             end
             TabPage.Visible = true
-            WindowObj:SetMainColor(WindowObj.Theme.Accent)
+            WindowObj:SetMainColor(WindowObj.Theme.Accent) 
             SearchBox.Text = "" 
         end)
-
+        
         if #WindowObj.Tabs == 0 then 
             WindowObj.CurrentTab = tabName
             TabPage.Visible = true 
         end
-        
         table.insert(WindowObj.Tabs, {Button = TabButton, Page = TabPage})
 
-        -- =====================================================================
-        -- HÀM THÊM ELEMENT VÀO CONTAINER (APPEND ELEMENTS)
-        -- =====================================================================
+        -- Đóng gói Element Creation Logic
         local function AppendElements(container, parentSection)
             local Elements = {}
+            local layoutOrder = 0
+            local function NextLayoutOrder()
+                layoutOrder += 1
+                return layoutOrder
+            end
             
             local function RegisterElement(frame, text) 
                 table.insert(WindowObj.ElementsCache, {
@@ -490,55 +572,65 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 }) 
             end
 
-            -- 1. Create Divider
             function Elements:CreateDivider()
                 local Div = Instance.new("Frame")
                 Div.Size = UDim2.new(1, -8, 0, 1)
                 Div.BorderSizePixel = 0
+                Div.LayoutOrder = NextLayoutOrder()
                 Div.Parent = container
-
+                
                 RegisterTheme(function(theme) 
                     Div.BackgroundColor3 = theme.Border
                     Div.BackgroundTransparency = theme.ElementTransparency 
                 end)
-
                 RegisterElement(Div, "")
             end
 
-            -- 2. Create Label (Hỗ trợ \n và tự động giãn dòng khi Resize)
             function Elements:CreateLabel(text)
                 local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, -8, 0, 0)
-                Label.AutomaticSize = Enum.AutomaticSize.Y
-                Label.TextWrapped = true 
+                Label.Size = UDim2.new(1, -8, 0, 13)
                 Label.BackgroundTransparency = 1
                 Label.Text = text
                 Label.Font = Enum.Font.Code
                 Label.TextSize = 13
                 Label.TextXAlignment = Enum.TextXAlignment.Left
                 Label.TextYAlignment = Enum.TextYAlignment.Top
+                Label.TextWrapped = true
+                Label.AutomaticSize = Enum.AutomaticSize.None
+                Label.LayoutOrder = NextLayoutOrder()
                 Label.Parent = container
-                
-                RegisterTheme(function(theme) 
-                    Label.TextColor3 = theme.Text 
+
+                local function updateHeight()
+                    local width = math.max(1, container.AbsoluteSize.X - 8)
+                    local h = MeasureWrappedHeight(Label.Text, Label.Font, Label.TextSize, width)
+                    Label.Size = UDim2.new(1, -8, 0, h)
+                end
+
+                Label:GetPropertyChangedSignal("Text"):Connect(updateHeight)
+                container:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeight)
+                task.defer(updateHeight)
+
+                RegisterTheme(function(theme)
+                    Label.TextColor3 = theme.Text
                 end)
-                
                 RegisterElement(Label, text)
-                
+
                 local handler = {}
-                function handler:SetText(newText) 
-                    Label.Text = newText 
+                function handler:SetText(newText)
+                    Label.Text = newText or ""
+                    UpdateElementCacheText(Label, newText or "")
+                    updateHeight()
                 end
                 return handler
             end
 
-            -- 3. Create Paragraph (Hỗ trợ nhiều dòng tiêu đề & nội dung)
             function Elements:CreateParagraph(titleText, contentText)
                 local ParaFrame = Instance.new("Frame")
                 ParaFrame.Size = UDim2.new(1, -8, 0, 0) 
                 ParaFrame.BorderSizePixel = 1
                 ParaFrame.AutomaticSize = Enum.AutomaticSize.Y 
                 ParaFrame.ClipsDescendants = true
+                ParaFrame.LayoutOrder = NextLayoutOrder()
                 ParaFrame.Parent = container
                 
                 local UIPadding = Instance.new("UIPadding")
@@ -554,15 +646,15 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 ParaLayout.Parent = ParaFrame
 
                 local Title = Instance.new("TextLabel")
-                Title.Size = UDim2.new(1, 0, 0, 0)
-                Title.AutomaticSize = Enum.AutomaticSize.Y
-                Title.TextWrapped = true
+                Title.Size = UDim2.new(1, 0, 0, 15)
                 Title.BackgroundTransparency = 1
                 Title.Text = titleText or "Paragraph"
                 Title.Font = Enum.Font.Code
                 Title.TextSize = 15
                 Title.TextXAlignment = Enum.TextXAlignment.Left
                 Title.TextYAlignment = Enum.TextYAlignment.Top
+                Title.TextWrapped = true
+                Title.AutomaticSize = Enum.AutomaticSize.None
                 Title.Parent = ParaFrame
 
                 local Div = Instance.new("Frame")
@@ -571,22 +663,46 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Div.Parent = ParaFrame
 
                 local Content = Instance.new("TextLabel")
-                Content.Size = UDim2.new(1, 0, 0, 0)
-                Content.AutomaticSize = Enum.AutomaticSize.Y
-                Content.TextWrapped = true
+                Content.Size = UDim2.new(1, 0, 0, 13)
                 Content.BackgroundTransparency = 1
                 Content.Text = contentText or ""
                 Content.Font = Enum.Font.Code
                 Content.TextSize = 13
                 Content.TextXAlignment = Enum.TextXAlignment.Left
                 Content.TextYAlignment = Enum.TextYAlignment.Top
+                Content.TextWrapped = true
+                Content.AutomaticSize = Enum.AutomaticSize.None
                 Content.Parent = ParaFrame
+
+                local function updateTitle()
+                    local width = math.max(1, ParaFrame.AbsoluteSize.X - 10)
+                    local h = MeasureWrappedHeight(Title.Text, Title.Font, Title.TextSize, width)
+                    Title.Size = UDim2.new(1, 0, 0, h)
+                end
+
+                local function updateContent()
+                    local width = math.max(1, ParaFrame.AbsoluteSize.X - 10)
+                    local h = MeasureWrappedHeight(Content.Text, Content.Font, Content.TextSize, width)
+                    Content.Size = UDim2.new(1, 0, 0, h)
+                end
 
                 local function UpdateVisibility()
                     local hasText = (Content.Text ~= "")
                     Content.Visible = hasText
                     Div.Visible = hasText
                 end
+
+                Title:GetPropertyChangedSignal("Text"):Connect(updateTitle)
+                Content:GetPropertyChangedSignal("Text"):Connect(function()
+                    updateContent()
+                    UpdateVisibility()
+                end)
+                ParaFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    updateTitle()
+                    updateContent()
+                end)
+                task.defer(updateTitle)
+                task.defer(updateContent)
                 UpdateVisibility()
 
                 RegisterTheme(function(theme)
@@ -598,26 +714,27 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     Div.BackgroundTransparency = theme.ElementTransparency
                     Content.TextColor3 = theme.Text
                 end)
-
-                RegisterElement(ParaFrame, titleText .. " " .. contentText)
+                
+                RegisterElement(ParaFrame, (titleText or "") .. " " .. (contentText or ""))
 
                 local handler = {}
-                function handler:SetTitle(newTitle) 
-                    Title.Text = newTitle or "" 
+                function handler:SetTitle(newTitle)
+                    Title.Text = newTitle or ""
+                    UpdateElementCacheText(ParaFrame, (Title.Text or "") .. " " .. (Content.Text or ""))
+                    updateTitle()
                 end
-                function handler:SetText(newText) 
+                function handler:SetText(newText)
                     Content.Text = newText or ""
-                    UpdateVisibility() 
+                    UpdateElementCacheText(ParaFrame, (Title.Text or "") .. " " .. (Content.Text or ""))
+                    updateContent()
+                    UpdateVisibility()
                 end
                 return handler
             end
-
-            -- 4. Create Image (Cách ly hoàn toàn khỏi BackgroundTransparency)
             function Elements:CreateImage(imageId, size)
                 local ImgLabel = Instance.new("ImageLabel")
                 ImgLabel.BorderSizePixel = 1
-                ImgLabel.BackgroundTransparency = 1 -- Giữ nền ảnh luôn sạch để không bị đè màu
-                ImgLabel.Parent = container
+                ImgLabel.BackgroundTransparency = 1
                 
                 if size then
                     ImgLabel.Size = size
@@ -626,29 +743,26 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     ImgLabel.Size = UDim2.new(1, -8, 0, 150)
                     ImgLabel.ScaleType = Enum.ScaleType.Fit
                 end
+                ImgLabel.LayoutOrder = NextLayoutOrder()
+                ImgLabel.Parent = container
                 
                 local function parseImageId(id)
-                    if type(id) == "number" then 
-                        return "rbxassetid://" .. id 
-                    end
+                    if type(id) == "number" then return "rbxassetid://" .. id end
                     if type(id) == "string" then
                         if id:find("rbxassetid://") or id:find("http") or id:find("rbxasset://") then 
                             return id 
                         end
                         local num = id:match("%d+")
-                        if num then 
-                            return "rbxassetid://" .. num 
-                        end
+                        if num then return "rbxassetid://" .. num end
                     end
                     return ""
                 end
+                
                 ImgLabel.Image = parseImageId(imageId)
                 
                 RegisterTheme(function(theme)
                     ImgLabel.BorderColor3 = theme.Border
-                    -- Ngắt liên kết ImageTransparency để ảnh giữ nguyên độ nét 100%
                 end)
-
                 RegisterElement(ImgLabel, "image")
                 
                 local handler = {}
@@ -662,7 +776,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 return handler
             end
 
-            -- 5. Create Button
             function Elements:CreateButton(text, callback)
                 local Btn = Instance.new("TextButton")
                 Btn.Size = UDim2.new(1, -8, 0, 22)
@@ -672,29 +785,28 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Btn.Text = text
                 Btn.Font = Enum.Font.Code
                 Btn.TextSize = 13
+                Btn.LayoutOrder = NextLayoutOrder()
                 Btn.Parent = container
                 
                 Btn.MouseButton1Click:Connect(callback)
-
+                
                 RegisterTheme(function(theme) 
                     Btn.BackgroundColor3 = theme.ElementBg
                     Btn.BorderColor3 = theme.Border
                     Btn.TextColor3 = theme.Text
                     Btn.BackgroundTransparency = theme.ElementTransparency 
                 end)
-
                 RegisterElement(Btn, text)
             end
 
-            -- 6. Create Toggle (Lắng nghe AbsoluteSize khi Resize góc Window)
             function Elements:CreateToggle(text, default, callback)
                 local state = default or false
-                
                 local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 20)
                 Frame.BackgroundTransparency = 1
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
-
+                
                 local CheckBox = Instance.new("TextButton")
                 CheckBox.Size = UDim2.new(0, 16, 0, 16)
                 CheckBox.Position = UDim2.new(0, 0, 0, 2)
@@ -702,13 +814,9 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 CheckBox.Text = ""
                 CheckBox.Font = Enum.Font.Code
                 CheckBox.Parent = Frame
-
+                
                 local Fill = Instance.new("Frame")
-                if state then
-                    Fill.Size = UDim2.new(1, 0, 1, 0)
-                else
-                    Fill.Size = UDim2.new(0, 0, 0, 0)
-                end
+                Fill.Size = state and UDim2.new(1, 0, 1, 0) or UDim2.new(0, 0, 0, 0)
                 Fill.Position = UDim2.new(0.5, 0, 0.5, 0)
                 Fill.AnchorPoint = Vector2.new(0.5, 0.5)
                 Fill.BorderSizePixel = 0
@@ -724,13 +832,19 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Label.TextXAlignment = Enum.TextXAlignment.Left
                 Label.TextYAlignment = Enum.TextYAlignment.Top
                 Label.TextWrapped = true 
-                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.AutomaticSize = Enum.AutomaticSize.None
                 Label.Parent = Frame
-                
-                -- Hàm điều chỉnh kích thước bọc ngoài khi chữ rớt dòng do Resize hẹp cửa sổ
-                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-                    Frame.Size = UDim2.new(1, -8, 0, math.max(20, Label.AbsoluteSize.Y))
-                end)
+
+                local function updateLayout()
+                    local width = math.max(1, Frame.AbsoluteSize.X - 24)
+                    local h = math.max(20, MeasureWrappedHeight(Label.Text, Label.Font, Label.TextSize, width))
+                    Label.Size = UDim2.new(1, -24, 0, h)
+                    Frame.Size = UDim2.new(1, -8, 0, h)
+                end
+
+                Label:GetPropertyChangedSignal("Text"):Connect(updateLayout)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
+                task.defer(updateLayout)
                 
                 RegisterTheme(function(theme) 
                     CheckBox.BackgroundColor3 = theme.ElementBg
@@ -742,27 +856,22 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 
                 local function trigger() 
                     state = not state
-                    if state then
-                        Tween(Fill, {Size = UDim2.new(1, 0, 1, 0)}, 0.15)
-                    else
-                        Tween(Fill, {Size = UDim2.new(0, 0, 0, 0)}, 0.15)
-                    end
+                    Tween(Fill, {Size = state and UDim2.new(1, 0, 1, 0) or UDim2.new(0, 0, 0, 0)}, 0.15)
                     callback(state) 
                 end
-
+                
                 CheckBox.MouseButton1Click:Connect(trigger)
                 Label.MouseButton1Click:Connect(trigger)
-                
                 RegisterElement(Frame, text)
             end
 
-            -- 7. Create Slider (Tự động tính tọa độ kéo/đẩy thanh trượt khi thu phóng)
             function Elements:CreateSlider(text, min, max, default, callback)
                 local value = default or min
-                
                 local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 35)
                 Frame.BackgroundTransparency = 1
+                Frame.LayoutOrder = NextLayoutOrder()
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
                 
                 local Label = Instance.new("TextLabel")
@@ -774,7 +883,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Label.TextXAlignment = Enum.TextXAlignment.Left
                 Label.TextYAlignment = Enum.TextYAlignment.Top
                 Label.TextWrapped = true
-                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.AutomaticSize = Enum.AutomaticSize.None
                 Label.Parent = Frame
                 
                 local ValLabel = Instance.new("TextLabel")
@@ -793,18 +902,23 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 SliderBg.BorderSizePixel = 1
                 SliderBg.Text = ""
                 SliderBg.Parent = Frame
-
+                
                 local Fill = Instance.new("Frame")
-                Fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+                Fill.Size = UDim2.new((value - min)/(max - min), 0, 1, 0)
                 Fill.BorderSizePixel = 0
                 Fill.Parent = SliderBg
 
-                -- Khi Text Slider quá dài và xuống dòng, đẩy trục slider xuống dưới
-                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-                    local newY = Label.AbsoluteSize.Y
+                local function updateLayout()
+                    local width = math.max(1, Frame.AbsoluteSize.X - 40)
+                    local newY = math.max(15, MeasureWrappedHeight(Label.Text, Label.Font, Label.TextSize, width))
+                    Label.Size = UDim2.new(1, -40, 0, newY)
                     SliderBg.Position = UDim2.new(0, 0, 0, newY + 5)
                     Frame.Size = UDim2.new(1, -8, 0, newY + 20)
-                end)
+                end
+
+                Label:GetPropertyChangedSignal("Text"):Connect(updateLayout)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
+                task.defer(updateLayout)
 
                 RegisterTheme(function(theme) 
                     Label.TextColor3 = theme.Text
@@ -825,32 +939,23 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
 
                 SliderBg.InputBegan:Connect(function(input) 
-                    if IsValidInputBegan(input) then 
-                        sliding = true
-                        update(input) 
-                    end 
+                    if IsValidInputBegan(input) then sliding = true; update(input) end 
                 end)
-                
                 UserInputService.InputChanged:Connect(function(input) 
-                    if sliding and IsValidInputChanged(input) then 
-                        update(input) 
-                    end 
+                    if sliding and IsValidInputChanged(input) then update(input) end 
                 end)
-                
                 UserInputService.InputEnded:Connect(function(input) 
-                    if IsValidInputBegan(input) then 
-                        sliding = false 
-                    end 
+                    if IsValidInputBegan(input) then sliding = false end 
                 end)
-
                 RegisterElement(Frame, text)
             end
 
-            -- 8. Create TextBox
             function Elements:CreateTextBox(text, placeholder, callback)
                 local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BackgroundTransparency = 1
+                Frame.LayoutOrder = NextLayoutOrder()
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
                 
                 local Label = Instance.new("TextLabel")
@@ -862,7 +967,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Label.TextXAlignment = Enum.TextXAlignment.Left
                 Label.TextYAlignment = Enum.TextYAlignment.Top
                 Label.TextWrapped = true
-                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.AutomaticSize = Enum.AutomaticSize.None
                 Label.Parent = Frame
                 
                 local TBox = Instance.new("TextBox")
@@ -876,11 +981,17 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 TBox.ClearTextOnFocus = false
                 TBox.Parent = Frame
 
-                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-                    local h = math.max(22, Label.AbsoluteSize.Y)
-                    Frame.Size = UDim2.new(1, -8, 0, h)
-                    TBox.Size = UDim2.new(0.5, 5, 0, h)
-                end)
+                local function updateLayout()
+                    local width = math.max(1, Frame.AbsoluteSize.X * 0.5 - 5)
+                    local labelHeight = math.max(22, MeasureWrappedHeight(Label.Text, Label.Font, Label.TextSize, width))
+                    Frame.Size = UDim2.new(1, -8, 0, labelHeight)
+                    Label.Size = UDim2.new(0.5, -5, 0, labelHeight)
+                    TBox.Size = UDim2.new(0.5, 5, 0, labelHeight)
+                end
+
+                Label:GetPropertyChangedSignal("Text"):Connect(updateLayout)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
+                task.defer(updateLayout)
 
                 RegisterTheme(function(theme) 
                     Label.TextColor3 = theme.Text
@@ -893,7 +1004,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 TBox.FocusLost:Connect(function(enter) 
                     callback(TBox.Text, enter) 
                 end)
-                
                 RegisterElement(Frame, text)
                 
                 local handler = {}
@@ -903,7 +1013,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 return handler
             end
 
-            -- 9. Create Dropdown
             function Elements:CreateDropdown(text, options, default, callback)
                 options = options or {}
                 local selected = default or options[1] or ""
@@ -913,6 +1022,8 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BorderSizePixel = 1
                 Frame.ClipsDescendants = true
+                Frame.LayoutOrder = NextLayoutOrder()
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
                 
                 local ToggleBtn = Instance.new("TextButton")
@@ -924,11 +1035,11 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
                 ToggleBtn.TextYAlignment = Enum.TextYAlignment.Top
                 ToggleBtn.TextWrapped = true
-                ToggleBtn.AutomaticSize = Enum.AutomaticSize.Y
+                ToggleBtn.AutomaticSize = Enum.AutomaticSize.None
                 ToggleBtn.Parent = Frame
                 
                 local DropArea = Instance.new("ScrollingFrame")
-                DropArea.Size = UDim2.new(1, 0, 0, 100)
+                DropArea.Size = UDim2.new(1, 0, 0, 0)
                 DropArea.Position = UDim2.new(0, 0, 0, 22)
                 DropArea.BackgroundTransparency = 1
                 DropArea.BorderSizePixel = 0
@@ -943,27 +1054,33 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 DropLayout.Parent = DropArea
 
                 local function updateDropSize(animate)
-                    local base = ToggleBtn.AbsoluteSize.Y
+                    local base = math.max(22, MeasureWrappedHeight(ToggleBtn.Text, ToggleBtn.Font, ToggleBtn.TextSize, math.max(1, Frame.AbsoluteSize.X)))
+                    local visibleDrop = math.min(100, DropLayout.AbsoluteContentSize.Y)
+                    ToggleBtn.Size = UDim2.new(1, 0, 0, base)
                     DropArea.Position = UDim2.new(0, 0, 0, base)
-                    local targetSize = UDim2.new(1, -8, 0, open and (base + 100) or base)
+                    DropArea.Size = UDim2.new(1, 0, 0, open and visibleDrop or 0)
+                    local targetSize = UDim2.new(1, -8, 0, open and (base + visibleDrop) or base)
                     if animate then 
                         Tween(Frame, {Size = targetSize}, 0.2) 
                     else 
                         Frame.Size = targetSize 
                     end
                 end
-                
-                ToggleBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
+                ToggleBtn:GetPropertyChangedSignal("Text"):Connect(function() 
+                    updateDropSize(false) 
+                end)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
                     updateDropSize(false) 
                 end)
 
+                local OptButtons = {}
                 local function refreshOptions()
                     DropArea:ClearAllChildren()
-                    local L = Instance.new("UIListLayout")
-                    L.SortOrder = Enum.SortOrder.LayoutOrder
-                    L.Parent = DropArea
+                    DropLayout = Instance.new("UIListLayout")
+                    DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                    DropLayout.Parent = DropArea
+                    OptButtons = {} 
                     
-                    local OptButtons = {} 
                     for _, opt in ipairs(options) do
                         local OBtn = Instance.new("TextButton")
                         OBtn.Size = UDim2.new(1, -4, 0, 20)
@@ -976,11 +1093,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                         table.insert(OptButtons, {Btn = OBtn, Value = opt})
 
                         RegisterTheme(function(theme) 
-                            if selected == opt then
-                                OBtn.BackgroundColor3 = theme.Accent
-                            else
-                                OBtn.BackgroundColor3 = theme.ElementBg
-                            end
+                            OBtn.BackgroundColor3 = (selected == opt) and theme.Accent or theme.ElementBg
                             OBtn.TextColor3 = theme.Text
                             OBtn.BackgroundTransparency = theme.ElementTransparency
                         end)
@@ -990,11 +1103,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                             ToggleBtn.Text = " ► " .. text .. " [" .. tostring(opt) .. "]"
                             if WindowObj.Theme.Accent then 
                                 for _, data in ipairs(OptButtons) do 
-                                    if selected == data.Value then
-                                        data.Btn.BackgroundColor3 = WindowObj.Theme.Accent 
-                                    else
-                                        data.Btn.BackgroundColor3 = WindowObj.Theme.ElementBg
-                                    end
+                                    data.Btn.BackgroundColor3 = (selected == data.Value) and WindowObj.Theme.Accent or WindowObj.Theme.ElementBg 
                                 end 
                             end
                             callback(opt)
@@ -1002,8 +1111,9 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                             updateDropSize(true)
                         end)
                     end
+
+                    task.defer(updateDropSize)
                 end
-                
                 refreshOptions()
                 
                 RegisterTheme(function(theme) 
@@ -1015,14 +1125,9 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 
                 ToggleBtn.MouseButton1Click:Connect(function() 
                     open = not open
-                    if open then
-                        ToggleBtn.Text = " ▼ " .. text .. " [" .. tostring(selected) .. "]"
-                    else
-                        ToggleBtn.Text = " ► " .. text .. " [" .. tostring(selected) .. "]"
-                    end
+                    ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [" .. tostring(selected) .. "]"
                     updateDropSize(true) 
                 end)
-                
                 RegisterElement(Frame, text)
 
                 local handler = {}
@@ -1032,8 +1137,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
                 return handler
             end
-
-            -- 10. Create MultiDropdown
             function Elements:CreateMultiDropdown(text, options, defaultSelects, callback)
                 options = options or {}
                 local SelectedOptions = {}
@@ -1041,11 +1144,12 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     SelectedOptions[v] = true 
                 end
                 local open = false
-
+                
                 local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BorderSizePixel = 1
                 Frame.ClipsDescendants = true
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
 
                 local ToggleBtn = Instance.new("TextButton")
@@ -1056,7 +1160,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
                 ToggleBtn.TextYAlignment = Enum.TextYAlignment.Top
                 ToggleBtn.TextWrapped = true
-                ToggleBtn.AutomaticSize = Enum.AutomaticSize.Y
+                ToggleBtn.AutomaticSize = Enum.AutomaticSize.None
                 ToggleBtn.Parent = Frame
 
                 local function updateToggleText()
@@ -1065,24 +1169,22 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     for k, v in pairs(SelectedOptions) do 
                         if v then 
                             count = count + 1
-                            if count == 1 then 
-                                first = k 
-                            end 
+                            if count == 1 then first = k end 
                         end 
                     end
-                    local prefix = open and " ▼ " or " ► "
+                    
                     if count == 0 then 
-                        ToggleBtn.Text = prefix .. text .. " [None]"
+                        ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [None]"
                     elseif count == 1 then 
-                        ToggleBtn.Text = prefix .. text .. " [" .. first .. "]"
+                        ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [" .. first .. "]"
                     else 
-                        ToggleBtn.Text = prefix .. text .. " [" .. count .. " Selected]" 
+                        ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [" .. count .. " Selected]" 
                     end
                 end
                 updateToggleText()
 
                 local DropArea = Instance.new("ScrollingFrame")
-                DropArea.Size = UDim2.new(1, 0, 0, 100)
+                DropArea.Size = UDim2.new(1, 0, 0, 0)
                 DropArea.Position = UDim2.new(0, 0, 0, 22)
                 DropArea.BackgroundTransparency = 1
                 DropArea.BorderSizePixel = 0
@@ -1097,37 +1199,39 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 DropLayout.Parent = DropArea
 
                 local function updateDropSize(animate)
-                    local base = ToggleBtn.AbsoluteSize.Y
+                    local base = math.max(22, MeasureWrappedHeight(ToggleBtn.Text, ToggleBtn.Font, ToggleBtn.TextSize, math.max(1, Frame.AbsoluteSize.X)))
+                    local visibleDrop = math.min(100, DropLayout.AbsoluteContentSize.Y)
+                    ToggleBtn.Size = UDim2.new(1, 0, 0, base)
                     DropArea.Position = UDim2.new(0, 0, 0, base)
-                    local targetSize = UDim2.new(1, -8, 0, open and (base + 100) or base)
+                    DropArea.Size = UDim2.new(1, 0, 0, open and visibleDrop or 0)
+                    local targetSize = UDim2.new(1, -8, 0, open and (base + visibleDrop) or base)
                     if animate then 
                         Tween(Frame, {Size = targetSize}, 0.2) 
                     else 
                         Frame.Size = targetSize 
                     end
                 end
-                
-                ToggleBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
+                ToggleBtn:GetPropertyChangedSignal("Text"):Connect(function() 
+                    updateToggleText()
+                    updateDropSize(false) 
+                end)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
                     updateDropSize(false) 
                 end)
 
                 local function fireCb()
                     local ret = {}
                     for k, v in pairs(SelectedOptions) do 
-                        if v then 
-                            table.insert(ret, k) 
-                        end 
+                        if v then table.insert(ret, k) end 
                     end
-                    if callback then 
-                        callback(ret) 
-                    end
+                    if callback then callback(ret) end
                 end
 
                 local function refreshOptions()
                     DropArea:ClearAllChildren()
-                    local L = Instance.new("UIListLayout")
-                    L.SortOrder = Enum.SortOrder.LayoutOrder
-                    L.Parent = DropArea
+                    DropLayout = Instance.new("UIListLayout")
+                    DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                    DropLayout.Parent = DropArea
                     
                     for _, opt in ipairs(options) do
                         local OBtn = Instance.new("TextButton")
@@ -1138,27 +1242,15 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                         OBtn.Parent = DropArea
                         
                         local function updateOptVisual() 
-                            if SelectedOptions[opt] then
-                                OBtn.Text = "✓ " .. tostring(opt)
-                            else
-                                OBtn.Text = "  " .. tostring(opt)
-                            end
+                            OBtn.Text = (SelectedOptions[opt] and "✓ " or "  ") .. tostring(opt)
                             if WindowObj.Theme.Accent then 
-                                if SelectedOptions[opt] then
-                                    OBtn.BackgroundColor3 = WindowObj.Theme.Accent
-                                else
-                                    OBtn.BackgroundColor3 = WindowObj.Theme.ElementBg
-                                end
+                                OBtn.BackgroundColor3 = SelectedOptions[opt] and WindowObj.Theme.Accent or WindowObj.Theme.ElementBg 
                             end 
                         end
                         updateOptVisual()
 
                         RegisterTheme(function(theme) 
-                            if SelectedOptions[opt] then
-                                OBtn.BackgroundColor3 = theme.Accent
-                            else
-                                OBtn.BackgroundColor3 = theme.ElementBg
-                            end
+                            OBtn.BackgroundColor3 = SelectedOptions[opt] and theme.Accent or theme.ElementBg
                             OBtn.TextColor3 = theme.Text
                             OBtn.BackgroundTransparency = theme.ElementTransparency 
                         end)
@@ -1170,6 +1262,8 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                             fireCb() 
                         end)
                     end
+
+                    task.defer(updateDropSize)
                 end
                 refreshOptions()
 
@@ -1185,20 +1279,15 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     updateToggleText()
                     updateDropSize(true) 
                 end)
-                
                 RegisterElement(Frame, text)
 
                 local handler = {}
                 function handler:Refresh(newOpts) 
                     options = newOpts
                     local valid = {}
-                    for _, v in ipairs(newOpts) do 
-                        valid[v] = true 
-                    end
-                    for k, _ in pairs(SelectedOptions) do 
-                        if not valid[k] then 
-                            SelectedOptions[k] = nil 
-                        end 
+                    for _,v in ipairs(newOpts) do valid[v] = true end
+                    for k,_ in pairs(SelectedOptions) do 
+                        if not valid[k] then SelectedOptions[k] = nil end 
                     end
                     refreshOptions()
                     updateToggleText()
@@ -1206,8 +1295,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 end
                 return handler
             end
-
-            -- 11. Create Keybind
             function Elements:CreateKeybind(text, defaultKey, callback)
                 local key = defaultKey or Enum.KeyCode.E
                 local binding = false
@@ -1215,6 +1302,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BackgroundTransparency = 1
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
                 
                 local Label = Instance.new("TextLabel")
@@ -1226,7 +1314,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Label.TextXAlignment = Enum.TextXAlignment.Left
                 Label.TextYAlignment = Enum.TextYAlignment.Top
                 Label.TextWrapped = true
-                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.AutomaticSize = Enum.AutomaticSize.None
                 Label.Parent = Frame
                 
                 local BindBtn = Instance.new("TextButton")
@@ -1238,11 +1326,17 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 BindBtn.TextSize = 12
                 BindBtn.Parent = Frame
 
-                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-                    local h = math.max(22, Label.AbsoluteSize.Y)
+                local function updateLayout()
+                    local width = math.max(1, Frame.AbsoluteSize.X * 0.6)
+                    local h = math.max(22, MeasureWrappedHeight(Label.Text, Label.Font, Label.TextSize, width))
                     Frame.Size = UDim2.new(1, -8, 0, h)
+                    Label.Size = UDim2.new(0.6, 0, 0, h)
                     BindBtn.Size = UDim2.new(0.35, 0, 0, h)
-                end)
+                end
+
+                Label:GetPropertyChangedSignal("Text"):Connect(updateLayout)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
+                task.defer(updateLayout)
 
                 RegisterTheme(function(theme) 
                     Label.TextColor3 = theme.Text
@@ -1271,19 +1365,18 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                         end
                     end
                 end)
-                
                 RegisterElement(Frame, text)
             end
 
-            -- 12. Create ColorPicker
             function Elements:CreateColorPicker(text, defaultColor, callback)
-                local color = defaultColor or Color3.fromRGB(255, 255, 255)
+                local color = defaultColor or Color3.fromRGB(255,255,255)
                 local open = false
                 
                 local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BorderSizePixel = 1
                 Frame.ClipsDescendants = true
+                Frame.LayoutOrder = NextLayoutOrder()
                 Frame.Parent = container
                 
                 local ToggleBtn = Instance.new("TextButton")
@@ -1295,7 +1388,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
                 ToggleBtn.TextYAlignment = Enum.TextYAlignment.Top
                 ToggleBtn.TextWrapped = true
-                ToggleBtn.AutomaticSize = Enum.AutomaticSize.Y
+                ToggleBtn.AutomaticSize = Enum.AutomaticSize.None
                 ToggleBtn.Parent = Frame
                 
                 local ColorDisplay = Instance.new("Frame")
@@ -1306,7 +1399,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 ColorDisplay.Parent = Frame
                 
                 local DropArea = Instance.new("Frame")
-                DropArea.Size = UDim2.new(1, 0, 0, 100)
+                DropArea.Size = UDim2.new(1, 0, 0, 105)
                 DropArea.Position = UDim2.new(0, 0, 0, 22)
                 DropArea.BackgroundTransparency = 1
                 DropArea.Parent = Frame
@@ -1314,9 +1407,10 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 local tempColor = color
 
                 local function updatePickerSize(animate)
-                    local base = ToggleBtn.AbsoluteSize.Y
+                    local base = math.max(22, MeasureWrappedHeight(ToggleBtn.Text, ToggleBtn.Font, ToggleBtn.TextSize, math.max(1, Frame.AbsoluteSize.X * 0.8)))
+                    ToggleBtn.Size = UDim2.new(0.8, 0, 0, base)
+                    ColorDisplay.Position = UDim2.new(0.82, 0, 0, math.max(0, math.floor((base - 14)/2)))
                     DropArea.Position = UDim2.new(0, 0, 0, base)
-                    ColorDisplay.Position = UDim2.new(0.82, 0, 0, (base - 14) / 2)
                     local targetSize = UDim2.new(1, -8, 0, open and (base + 105) or base)
                     if animate then 
                         Tween(Frame, {Size = targetSize}, 0.25) 
@@ -1324,51 +1418,46 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                         Frame.Size = targetSize 
                     end
                 end
-                
-                ToggleBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
-                    updatePickerSize(false) 
+                ToggleBtn:GetPropertyChangedSignal("Text"):Connect(function()
+                    updatePickerSize(false)
                 end)
+                Frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    updatePickerSize(false)
+                end)
+                task.defer(updatePickerSize)
 
                 local function CreateRgbSlider(name, pos, min, max, initial, updateCb)
-                    local SF = Instance.new("Frame")
+                    local SF = Instance.new("Frame", DropArea)
                     SF.Size = UDim2.new(1, -20, 0, 20)
                     SF.Position = UDim2.new(0, 10, 0, pos)
                     SF.BackgroundTransparency = 1
-                    SF.Parent = DropArea
                     
-                    local SN = Instance.new("TextLabel")
+                    local SN = Instance.new("TextLabel", SF)
                     SN.Size = UDim2.new(0.25, 0, 1, 0)
                     SN.Text = name .. ": " .. tostring(math.floor(initial))
                     SN.BackgroundTransparency = 1
                     SN.Font = Enum.Font.Code
                     SN.TextSize = 13
                     SN.TextXAlignment = Enum.TextXAlignment.Left
-                    SN.Parent = SF
                     
-                    local SB = Instance.new("TextButton")
+                    local SB = Instance.new("TextButton", SF)
                     SB.Size = UDim2.new(0.75, 0, 0.4, 0)
                     SB.Position = UDim2.new(0.25, 0, 0.3, 0)
                     SB.BorderSizePixel = 1
                     SB.Text = ""
-                    SB.Parent = SF
                     
-                    local SFill = Instance.new("Frame")
-                    SFill.Size = UDim2.new(initial / max, 0, 1, 0)
+                    local SFill = Instance.new("Frame", SB)
+                    SFill.Size = UDim2.new(initial/max, 0, 1, 0)
                     SFill.BorderSizePixel = 0
-                    SFill.Parent = SB
 
                     RegisterTheme(function(theme)
                         SN.TextColor3 = theme.Text
                         SB.BackgroundColor3 = theme.WindowBg
                         SB.BorderColor3 = theme.Border
                         SB.BackgroundTransparency = theme.ElementTransparency
-                        if name == "R" then 
-                            SFill.BackgroundColor3 = Color3.fromRGB(255, 50, 50) 
-                        elseif name == "G" then 
-                            SFill.BackgroundColor3 = Color3.fromRGB(50, 255, 50) 
-                        else 
-                            SFill.BackgroundColor3 = Color3.fromRGB(50, 50, 255) 
-                        end
+                        if name == "R" then SFill.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+                        elseif name == "G" then SFill.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+                        else SFill.BackgroundColor3 = Color3.fromRGB(50, 50, 255) end
                     end)
 
                     local sliding = false
@@ -1379,54 +1468,48 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                         SN.Text = name .. ": " .. tostring(val)
                         updateCb(val)
                     end
-                    
-                    SB.InputBegan:Connect(function(input) 
-                        if IsValidInputBegan(input) then 
-                            sliding = true
-                            doUpdate(input) 
-                        end 
+                    SB.InputBegan:Connect(function(input)
+                        if IsValidInputBegan(input) then sliding = true; doUpdate(input) end
+                    end)
+                    UserInputService.InputChanged:Connect(function(input)
+                        if sliding and IsValidInputChanged(input) then doUpdate(input) end
+                    end)
+                    UserInputService.InputEnded:Connect(function(input)
+                        if IsValidInputBegan(input) then sliding = false end
                     end)
                     
-                    UserInputService.InputChanged:Connect(function(input) 
-                        if sliding and IsValidInputChanged(input) then 
-                            doUpdate(input) 
-                        end 
-                    end)
-                    
-                    UserInputService.InputEnded:Connect(function(input) 
-                        if IsValidInputBegan(input) then 
-                            sliding = false 
-                        end 
-                    end)
-                    
-                    return function(newVal) 
+                    return function(newVal)
                         SN.Text = name .. ": " .. tostring(newVal)
-                        Tween(SFill, {Size = UDim2.new(newVal / max, 0, 1, 0)}, 0.2) 
+                        Tween(SFill, {Size = UDim2.new(newVal/max, 0, 1, 0)}, 0.2)
                     end
                 end
 
-                local r, g, b = tempColor.R * 255, tempColor.G * 255, tempColor.B * 255
-                local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v) r = v tempColor = Color3.fromRGB(r, g, b) ColorDisplay.BackgroundColor3 = tempColor end)
-                local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v) g = v tempColor = Color3.fromRGB(r, g, b) ColorDisplay.BackgroundColor3 = tempColor end)
-                local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v) b = v tempColor = Color3.fromRGB(r, g, b) ColorDisplay.BackgroundColor3 = tempColor end)
+                local r, g, b = tempColor.R*255, tempColor.G*255, tempColor.B*255
+                local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v)
+                    r = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor
+                end)
+                local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v)
+                    g = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor
+                end)
+                local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v)
+                    b = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor
+                end)
 
-                local CancelBtn = Instance.new("TextButton")
+                local CancelBtn = Instance.new("TextButton", DropArea)
                 CancelBtn.Size = UDim2.new(0.4, 0, 0, 20)
                 CancelBtn.Position = UDim2.new(0.05, 0, 0, 80)
                 CancelBtn.Text = "Cancel"
                 CancelBtn.BorderSizePixel = 1
                 CancelBtn.Font = Enum.Font.Code
                 CancelBtn.TextSize = 13
-                CancelBtn.Parent = DropArea
                 
-                local ApplyBtn = Instance.new("TextButton")
+                local ApplyBtn = Instance.new("TextButton", DropArea)
                 ApplyBtn.Size = UDim2.new(0.4, 0, 0, 20)
                 ApplyBtn.Position = UDim2.new(0.55, 0, 0, 80)
                 ApplyBtn.Text = "Apply"
                 ApplyBtn.BorderSizePixel = 1
                 ApplyBtn.Font = Enum.Font.Code
                 ApplyBtn.TextSize = 13
-                ApplyBtn.Parent = DropArea
 
                 RegisterTheme(function(theme)
                     Frame.BackgroundColor3 = theme.ElementBg
@@ -1434,57 +1517,48 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     Frame.BackgroundTransparency = theme.ElementTransparency
                     ToggleBtn.TextColor3 = theme.Text
                     ColorDisplay.BorderColor3 = theme.Border
+                    
                     CancelBtn.BackgroundColor3 = theme.WindowBg
                     CancelBtn.BorderColor3 = theme.Border
                     CancelBtn.TextColor3 = theme.Text
                     CancelBtn.BackgroundTransparency = theme.ElementTransparency
+                    
                     ApplyBtn.BackgroundColor3 = theme.Accent
                     ApplyBtn.BorderColor3 = theme.Border
-                    ApplyBtn.TextColor3 = Color3.new(1, 1, 1)
+                    ApplyBtn.TextColor3 = Color3.new(1,1,1)
                     ApplyBtn.BackgroundTransparency = theme.ElementTransparency
                 end)
 
-                local function toggle() 
+                local function toggle()
                     open = not open
-                    if open then
-                        ToggleBtn.Text = " ▼ " .. text
-                    else
-                        ToggleBtn.Text = " ► " .. text
-                    end
-                    updatePickerSize(true) 
+                    ToggleBtn.Text = (open and " ▼ " or " ► ") .. text
+                    updatePickerSize(true)
                 end
-                
                 ToggleBtn.MouseButton1Click:Connect(toggle)
                 
-                CancelBtn.MouseButton1Click:Connect(function() 
+                CancelBtn.MouseButton1Click:Connect(function()
                     tempColor = color
                     ColorDisplay.BackgroundColor3 = tempColor
-                    r = tempColor.R * 255
-                    g = tempColor.G * 255
-                    b = tempColor.B * 255
-                    setR(math.floor(r))
-                    setG(math.floor(g))
-                    setB(math.floor(b))
-                    toggle() 
+                    r,g,b = tempColor.R*255, tempColor.G*255, tempColor.B*255
+                    setR(math.floor(r)); setG(math.floor(g)); setB(math.floor(b))
+                    toggle()
                 end)
                 
-                ApplyBtn.MouseButton1Click:Connect(function() 
+                ApplyBtn.MouseButton1Click:Connect(function()
                     color = tempColor
                     callback(color)
-                    toggle() 
+                    toggle()
                 end)
-                
                 RegisterElement(Frame, text)
             end
 
-            -- 13. Create Section (Tự động thích ứng khi các phần tử con thay đổi size rớt dòng)
             function Elements:CreateSection(text)
                 local open = false
-                
                 local SecFrame = Instance.new("Frame")
                 SecFrame.Size = UDim2.new(1, -8, 0, 22)
                 SecFrame.BorderSizePixel = 1
                 SecFrame.ClipsDescendants = true
+                SecFrame.LayoutOrder = NextLayoutOrder()
                 SecFrame.Parent = container
                 
                 local SecBtn = Instance.new("TextButton")
@@ -1496,7 +1570,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 SecBtn.TextXAlignment = Enum.TextXAlignment.Left
                 SecBtn.TextYAlignment = Enum.TextYAlignment.Top
                 SecBtn.TextWrapped = true
-                SecBtn.AutomaticSize = Enum.AutomaticSize.Y
+                SecBtn.AutomaticSize = Enum.AutomaticSize.None
                 SecBtn.Parent = SecFrame
                 
                 local SecContent = Instance.new("Frame")
@@ -1511,34 +1585,29 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 SecLayout.Parent = SecContent
 
                 local function updateSec(animate)
-                    if open then
-                        SecBtn.Text = " ▼ " .. text
-                    else
-                        SecBtn.Text = " ► " .. text
-                    end
-                    local base = SecBtn.AbsoluteSize.Y
+                    SecBtn.Text = (open and " ▼ " or " ► ") .. text
+                    local base = math.max(22, MeasureWrappedHeight(SecBtn.Text, SecBtn.Font, SecBtn.TextSize, math.max(1, SecFrame.AbsoluteSize.X)))
+                    SecBtn.Size = UDim2.new(1, 0, 0, base)
                     SecContent.Position = UDim2.new(0, 10, 0, base)
-                    local targetSize = UDim2.new(1, -8, 0, open and (base + SecLayout.AbsoluteContentSize.Y + 4) or base)
+                    local newSize = UDim2.new(1, -8, 0, open and (base + SecLayout.AbsoluteContentSize.Y + 4) or base)
                     if animate then 
-                        Tween(SecFrame, {Size = targetSize}, 0.25) 
+                        Tween(SecFrame, {Size = newSize}, 0.25) 
                     else 
-                        SecFrame.Size = targetSize 
+                        SecFrame.Size = newSize 
                     end
                 end
 
+                SecBtn:GetPropertyChangedSignal("Text"):Connect(function()
+                    updateSec(false)
+                end)
                 SecBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
                     updateSec(false) 
                 end)
-                
                 SecLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() 
-                    if open then 
-                        updateSec(false) 
-                    end 
+                    if open then updateSec(false) end 
                 end)
-                
                 SecBtn.MouseButton1Click:Connect(function() 
-                    open = not open
-                    updateSec(true) 
+                    open = not open; updateSec(true) 
                 end)
 
                 RegisterTheme(function(theme) 
@@ -1552,14 +1621,11 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     Frame = SecFrame, 
                     ParentSection = parentSection, 
                     ForceOpen = function() 
-                        if not open then 
-                            open = true
-                            updateSec(true) 
-                        end 
+                        if not open then open = true; updateSec(true) end 
                     end 
                 }
-                
                 RegisterElement(SecFrame, text)
+                
                 return AppendElements(SecContent, SecObj)
             end
 
@@ -1569,5 +1635,4 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     end
     return WindowObj
 end
-
-return IrisLib
+return AltisLib
