@@ -1,5 +1,8 @@
 -- made by Gemini AI
--- [[ V3.8: Fixed Dropdown Not Show Selected Value Color,Upgrade Smart Search Bar ]]
+-- [[ UPGRADE: Smart Search Bar ]]
+-- [[ FIX LOGIC: Dropdown standard dynamic colors ]]
+-- [[ V3.6/3.7: ResizeHandle synced with MainColor ]]
+-- [[ NEW ELEMENT: Paragraph (Title, Divider, Text - Auto resize & Hide when empty) ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -208,7 +211,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         Theme = { ElementTransparency = 0 }
     }
 
-    -- TÍNH NĂNG SEARCH BAR ĐÃ NÂNG CẤP
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local query = SearchBox.Text:lower()
         local sectionsToOpen = {}
@@ -218,11 +220,9 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 if query == "" then
                     el.Frame.Visible = true
                 else
-                    -- Bỏ qua các element không có text (như Divider)
                     local isMatch = (el.Text ~= "" and el.Text:find(query) ~= nil)
                     el.Frame.Visible = isMatch
                     
-                    -- Nếu element khớp và nó nằm trong Section, lưu Section đó lại để mở
                     if isMatch and el.Section then
                         sectionsToOpen[el.Section] = true
                     end
@@ -230,11 +230,9 @@ function IrisLib.CreateWindow(titleText, defaultSize)
             end
         end
 
-        -- Buộc mở (Force Open) tất cả các Section chứa Element được tìm thấy
         if query ~= "" then
             for sec, _ in pairs(sectionsToOpen) do
                 local curr = sec
-                -- Dò ngược lên nếu có Section lồng trong Section
                 while curr do
                     curr.Frame.Visible = true
                     curr.ForceOpen()
@@ -332,7 +330,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         if #WindowObj.Tabs == 0 then WindowObj.CurrentTab = tabName; TabPage.Visible = true end
         table.insert(WindowObj.Tabs, {Button = TabButton, Page = TabPage})
 
-        -- Truyền tham số parentSection để hệ thống theo dõi phân cấp
         local function AppendElements(container, parentSection)
             local Elements = {}
             
@@ -350,7 +347,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 local Div = Instance.new("Frame", container)
                 Div.Size = UDim2.new(1, -8, 0, 1); Div.BorderSizePixel = 0
                 RegisterTheme(function(theme) Div.BackgroundColor3 = theme.Border; Div.BackgroundTransparency = theme.ElementTransparency end)
-                RegisterElement(Div, "") -- Gửi chuỗi rỗng để không bị search dính
+                RegisterElement(Div, "")
             end
 
             function Elements:CreateLabel(text)
@@ -362,6 +359,84 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 function LabelHandler:SetTitle(newText) Label.Text = newText end
                 function LabelHandler:SetText(newText) Label.Text = newText end
                 return LabelHandler
+            end
+
+            -- NEW PARAGRAPH ELEMENT
+            function Elements:CreateParagraph(titleText, contentText)
+                titleText = titleText or "Paragraph"
+                contentText = contentText or ""
+
+                local ParaFrame = Instance.new("Frame", container)
+                ParaFrame.Size = UDim2.new(1, -8, 0, 0) 
+                ParaFrame.BorderSizePixel = 1
+                ParaFrame.AutomaticSize = Enum.AutomaticSize.Y 
+                ParaFrame.ClipsDescendants = true
+                
+                local UIPadding = Instance.new("UIPadding", ParaFrame)
+                UIPadding.PaddingTop = UDim.new(0, 4)
+                UIPadding.PaddingBottom = UDim.new(0, 4)
+                UIPadding.PaddingLeft = UDim.new(0, 5)
+                UIPadding.PaddingRight = UDim.new(0, 5)
+
+                local ParaLayout = Instance.new("UIListLayout", ParaFrame)
+                ParaLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                ParaLayout.Padding = UDim.new(0, 4)
+
+                local Title = Instance.new("TextLabel", ParaFrame)
+                Title.Size = UDim2.new(1, 0, 0, 18)
+                Title.BackgroundTransparency = 1
+                Title.Text = titleText
+                Title.Font = Enum.Font.Code
+                Title.TextSize = 15 -- Chữ to hơn element thường
+                Title.TextXAlignment = Enum.TextXAlignment.Left
+
+                local Div = Instance.new("Frame", ParaFrame)
+                Div.Size = UDim2.new(1, 0, 0, 1)
+                Div.BorderSizePixel = 0
+
+                local Content = Instance.new("TextLabel", ParaFrame)
+                Content.Size = UDim2.new(1, 0, 0, 0)
+                Content.BackgroundTransparency = 1
+                Content.Text = contentText
+                Content.Font = Enum.Font.Code
+                Content.TextSize = 13
+                Content.TextXAlignment = Enum.TextXAlignment.Left
+                Content.TextYAlignment = Enum.TextYAlignment.Top
+                Content.TextWrapped = true
+                Content.AutomaticSize = Enum.AutomaticSize.Y
+
+                local function UpdateVisibility()
+                    local hasText = (contentText ~= nil and contentText ~= "")
+                    Content.Visible = hasText
+                    Div.Visible = hasText
+                end
+                UpdateVisibility()
+
+                RegisterTheme(function(theme)
+                    ParaFrame.BackgroundColor3 = theme.ElementBg
+                    ParaFrame.BorderColor3 = theme.Border
+                    ParaFrame.BackgroundTransparency = theme.ElementTransparency
+                    Title.TextColor3 = theme.Accent 
+                    Div.BackgroundColor3 = theme.Border
+                    Div.BackgroundTransparency = theme.ElementTransparency
+                    Content.TextColor3 = theme.Text
+                end)
+
+                -- Lưu text chung để SearchBar có thể tìm ra được Paragraph này
+                RegisterElement(ParaFrame, titleText .. " " .. contentText)
+
+                local handler = {}
+                function handler:SetTitle(newTitle)
+                    titleText = newTitle or ""
+                    Title.Text = titleText
+                end
+                
+                function handler:SetText(newText)
+                    contentText = newText or ""
+                    Content.Text = contentText
+                    UpdateVisibility()
+                end
+                return handler
             end
 
             function Elements:CreateButton(text, callback)
@@ -761,7 +836,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 SecBtn.MouseButton1Click:Connect(function() open = not open; updateSec() end)
                 SecLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() if open then updateSec() end end)
                 
-                -- Tạo Object cho Section để SearchBar gọi hàm ép mở
                 local SecObj = {
                     Frame = SecFrame,
                     ParentSection = parentSection,
