@@ -1,20 +1,28 @@
--- made by Gemini AI
--- [[ FIX LOGIC: TextWrapped & AutomaticSize for \n (Multilines) support on all elements ]]
--- [[ FIX LOGIC: Image scale behavior (Strict size vs Auto-fit proportion) ]]
+-- =====================================================================
+-- ALTIS UI LIBRARY - VERSION 3.9.1 (OFFICIAL FULL RELEASE)
+-- FIX LOGIC: Dynamic Text Wrapping, Window Resizing, and Image Isolation
+-- =====================================================================
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local IrisLib = {}
 IrisLib.__index = IrisLib
 
-local TargetGuiParent
-pcall(function() TargetGuiParent = game:GetService("CoreGui") end)
-if not TargetGuiParent then TargetGuiParent = LocalPlayer:WaitForChild("PlayerGui") end
+-- Tìm phân vùng chứa UI phù hợp (Ưu tiên CoreGui nếu là Exploit)
+local TargetGuiParent = nil
+pcall(function()
+    TargetGuiParent = game:GetService("CoreGui")
+end)
+if not TargetGuiParent then
+    TargetGuiParent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
+-- Hàm khởi tạo hiệu ứng Tween mượt mà
 local function Tween(obj, props, duration, easingStyle)
     duration = duration or 0.2
     easingStyle = easingStyle or Enum.EasingStyle.Quart
@@ -24,6 +32,7 @@ local function Tween(obj, props, duration, easingStyle)
     return tween
 end
 
+-- Kiểm tra tín hiệu Input hợp lệ
 local function IsValidInputBegan(input)
     return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
 end
@@ -32,38 +41,59 @@ local function IsValidInputChanged(input)
     return input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch
 end
 
+-- Tính năng Kéo/Di chuyển Cửa sổ (Window Dragging)
 local function EnableDragging(dragFrame, hitFrame)
-    local dragging, dragInput, dragStart, startPos
+    local dragging = false
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+
     hitFrame.InputBegan:Connect(function(input)
         if IsValidInputBegan(input) then
             dragging = true
             dragStart = input.Position
             startPos = dragFrame.Position
+            
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
             end)
         end
     end)
+
     hitFrame.InputChanged:Connect(function(input)
-        if IsValidInputChanged(input) then dragInput = input end
+        if IsValidInputChanged(input) then
+            dragInput = input
+        end
     end)
+
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            dragFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            dragFrame.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
         end
     end)
 end
 
+-- =====================================================================
+-- HÀM KHỞI TẠO CỬA SỔ CHÍNH (CREATE WINDOW)
+-- =====================================================================
 function IrisLib.CreateWindow(titleText, defaultSize)
     titleText = titleText or "ImGui Window"
     defaultSize = defaultSize or UDim2.new(0, 500, 0, 350)
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "ImGui_Library_" .. math.random(10000, 99999)
+    ScreenGui.Name = "Altis_Lib_" .. math.random(10000, 99999)
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = TargetGuiParent
 
+    -- Container chứa thông báo (Notification)
     local NotifContainer = Instance.new("Frame")
     NotifContainer.Size = UDim2.new(0, 250, 1, -20)
     NotifContainer.Position = UDim2.new(1, -260, 0, 10)
@@ -77,13 +107,15 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     NotifLayout.Padding = UDim.new(0, 5)
     NotifLayout.Parent = NotifContainer
 
+    -- Khung Menu Chính
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = defaultSize
-    MainFrame.Position = UDim2.new(0.5, -defaultSize.X.Offset/2, 0.5, -defaultSize.Y.Offset/2) 
+    MainFrame.Position = UDim2.new(0.5, -defaultSize.X.Offset / 2, 0.5, -defaultSize.Y.Offset / 2) 
     MainFrame.BorderSizePixel = 1
     MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
 
+    -- Ảnh Nền Menu
     local BgImage = Instance.new("ImageLabel")
     BgImage.Size = UDim2.new(1, 0, 1, 0)
     BgImage.BackgroundTransparency = 1
@@ -92,6 +124,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     BgImage.ZIndex = 0
     BgImage.Parent = MainFrame
 
+    -- Thanh Tiêu Đề (TopBar)
     local TopBar = Instance.new("Frame")
     TopBar.Size = UDim2.new(1, 0, 0, 25)
     TopBar.BorderSizePixel = 0
@@ -109,6 +142,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     TitleLabel.ZIndex = 3
     TitleLabel.Parent = TopBar
 
+    -- Hộp Tìm Kiếm (Search Box)
     local SearchBox = Instance.new("TextBox")
     SearchBox.Size = UDim2.new(0, 120, 0, 19)
     SearchBox.Position = UDim2.new(1, -150, 0, 3)
@@ -121,6 +155,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     SearchBox.ZIndex = 3
     SearchBox.Parent = TopBar
 
+    -- Nút Thu Nhỏ (Minimize Button)
     local MinimizeBtn = Instance.new("TextButton")
     MinimizeBtn.Size = UDim2.new(0, 25, 0, 25)
     MinimizeBtn.Position = UDim2.new(1, -25, 0, 0)
@@ -132,6 +167,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     MinimizeBtn.ZIndex = 3
     MinimizeBtn.Parent = TopBar
 
+    -- Khu vực chứa Tab Ngang (Tab Scroller)
     local TabScroll = Instance.new("ScrollingFrame")
     TabScroll.Size = UDim2.new(1, 0, 0, 30)
     TabScroll.Position = UDim2.new(0, 0, 0, 25)
@@ -149,6 +185,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     TabScrollLayout.Padding = UDim.new(0, 2)
     TabScrollLayout.Parent = TabScroll
 
+    -- Khu vực chứa nội dung của Tab (Content Area)
     local ContentArea = Instance.new("Frame")
     ContentArea.Size = UDim2.new(1, 0, 1, -55)
     ContentArea.Position = UDim2.new(0, 0, 0, 55)
@@ -156,6 +193,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     ContentArea.ZIndex = 1
     ContentArea.Parent = MainFrame
 
+    -- Khung Kéo Giãn Cửa Sổ (Resize Corner Handle)
     local ResizeHandle = Instance.new("TextButton")
     ResizeHandle.Size = UDim2.new(0, 25, 0, 25)
     ResizeHandle.Position = UDim2.new(1, -25, 1, -25)
@@ -184,17 +222,24 @@ function IrisLib.CreateWindow(titleText, defaultSize)
 
     EnableDragging(MainFrame, TopBar)
 
-    local resizing, resizeStart, startSize
+    -- Xử lý Logic kéo giãn kích thước UI
+    local resizing = false
+    local resizeStart = nil
+    local startSize = nil
+
     ResizeHandle.InputBegan:Connect(function(input)
         if IsValidInputBegan(input) then
             resizing = true
             resizeStart = input.Position
             startSize = MainFrame.AbsoluteSize
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then resizing = false end
+                if input.UserInputState == Enum.UserInputState.End then 
+                    resizing = false 
+                end
             end)
         end
     end)
+
     UserInputService.InputChanged:Connect(function(input)
         if resizing and IsValidInputChanged(input) then
             local delta = input.Position - resizeStart
@@ -204,11 +249,16 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         end
     end)
 
+    -- Khởi tạo Object Window
     local WindowObj = {
-        Tabs = {}, CurrentTab = nil, ThemeCallbacks = {}, ElementsCache = {},
+        Tabs = {}, 
+        CurrentTab = nil, 
+        ThemeCallbacks = {}, 
+        ElementsCache = {},
         Theme = { ElementTransparency = 0 }
     }
 
+    -- Hệ thống Lọc / Tìm kiếm cấu trúc phần tử (Search Engine)
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local query = SearchBox.Text:lower()
         local sectionsToOpen = {}
@@ -218,11 +268,10 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 if query == "" then
                     el.Frame.Visible = true
                 else
-                    local isMatch = (el.Text ~= "" and el.Text:find(query) ~= nil)
+                    local isMatch = (el.Text ~= "" and el.Text:find(query, 1, true) ~= nil)
                     el.Frame.Visible = isMatch
-                    
-                    if isMatch and el.Section then
-                        sectionsToOpen[el.Section] = true
+                    if isMatch and el.Section then 
+                        sectionsToOpen[el.Section] = true 
                     end
                 end
             end
@@ -240,66 +289,146 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         end
     end)
 
-    function WindowObj:SetBackgroundImage(assetId) BgImage.Image = assetId end
-    function WindowObj:SetBackgroundImageTransparency(val) BgImage.ImageTransparency = math.clamp(val, 0, 1) end
+    -- =====================================================================
+    -- WINDOW METHODS
+    -- =====================================================================
+    function WindowObj:SetBackgroundImage(assetId) 
+        if type(assetId) == "number" then
+            BgImage.Image = "rbxassetid://" .. assetId
+        else
+            BgImage.Image = assetId
+        end
+    end
+
+    function WindowObj:SetBackgroundImageTransparency(val) 
+        BgImage.ImageTransparency = math.clamp(val, 0, 1) 
+    end
+
     function WindowObj:SetBackgroundTransparency(value)
         self.Theme.ElementTransparency = math.clamp(value, 0, 1)
-        for _, cb in ipairs(self.ThemeCallbacks) do cb(self.Theme) end
+        for _, cb in ipairs(self.ThemeCallbacks) do 
+            cb(self.Theme) 
+        end
     end
+
     function WindowObj:SetMainColor(color)
         local h, s, v = color:ToHSV()
         self.Theme = {
-            Accent = color, WindowBg = Color3.fromHSV(h, s * 0.1, 0.08), TopBar = Color3.fromHSV(h, s * 0.2, 0.15),    
-            ElementBg = Color3.fromHSV(h, s * 0.15, 0.15), Border = Color3.fromHSV(h, s * 0.3, 0.25),    
-            Text = Color3.fromRGB(240, 240, 240), ElementTransparency = self.Theme.ElementTransparency
+            Accent = color, 
+            WindowBg = Color3.fromHSV(h, s * 0.1, 0.08), 
+            TopBar = Color3.fromHSV(h, s * 0.2, 0.15),    
+            ElementBg = Color3.fromHSV(h, s * 0.15, 0.15), 
+            Border = Color3.fromHSV(h, s * 0.3, 0.25),    
+            Text = Color3.fromRGB(240, 240, 240), 
+            ElementTransparency = self.Theme.ElementTransparency
         }
-        for _, cb in ipairs(self.ThemeCallbacks) do cb(self.Theme) end
+        for _, cb in ipairs(self.ThemeCallbacks) do 
+            cb(self.Theme) 
+        end
     end
 
     local function RegisterTheme(callback)
         table.insert(WindowObj.ThemeCallbacks, callback)
-        if WindowObj.Theme.Accent then callback(WindowObj.Theme) end
+        if WindowObj.Theme.Accent then 
+            callback(WindowObj.Theme) 
+        end
     end
 
     RegisterTheme(function(theme)
-        MainFrame.BackgroundColor3 = theme.WindowBg; MainFrame.BackgroundTransparency = theme.ElementTransparency; MainFrame.BorderColor3 = theme.Border
-        TopBar.BackgroundColor3 = theme.TopBar; SearchBox.BackgroundColor3 = theme.ElementBg; SearchBox.BorderColor3 = theme.Border; SearchBox.TextColor3 = theme.Text; SearchBox.BackgroundTransparency = theme.ElementTransparency
-        TabScroll.BackgroundColor3 = theme.WindowBg; TabScroll.BackgroundTransparency = theme.ElementTransparency; TabScroll.BorderColor3 = theme.Border
+        MainFrame.BackgroundColor3 = theme.WindowBg
+        MainFrame.BackgroundTransparency = theme.ElementTransparency
+        MainFrame.BorderColor3 = theme.Border
+        
+        TopBar.BackgroundColor3 = theme.TopBar
+        
+        SearchBox.BackgroundColor3 = theme.ElementBg
+        SearchBox.BorderColor3 = theme.Border
+        SearchBox.TextColor3 = theme.Text
+        SearchBox.BackgroundTransparency = theme.ElementTransparency
+        
+        TabScroll.BackgroundColor3 = theme.WindowBg
+        TabScroll.BackgroundTransparency = theme.ElementTransparency
+        TabScroll.BorderColor3 = theme.Border
+        
         ResizeHandle.TextColor3 = theme.Accent
     end)
+    
+    -- Đặt màu mặc định ban đầu
     WindowObj:SetMainColor(Color3.fromRGB(60, 100, 180))
 
+    -- Hệ thống tạo Thông báo (Notification System)
     function WindowObj:SendNotification(title, text, duration)
-        local Wrapper = Instance.new("Frame", NotifContainer)
-        Wrapper.Size = UDim2.new(1, 0, 0, 0); Wrapper.BackgroundTransparency = 1; Wrapper.ClipsDescendants = true
-        local Notif = Instance.new("Frame", Wrapper)
-        Notif.Size = UDim2.new(1, 0, 1, 0); Notif.Position = UDim2.new(1, 50, 0, 0); Notif.BorderSizePixel = 1
-        local TitleLbl = Instance.new("TextLabel", Notif)
-        TitleLbl.Size = UDim2.new(1, -10, 0, 20); TitleLbl.Position = UDim2.new(0, 10, 0, 5); TitleLbl.BackgroundTransparency = 1; TitleLbl.Text = title; TitleLbl.Font = Enum.Font.Code; TitleLbl.TextSize = 14; TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
-        local TextLbl = Instance.new("TextLabel", Notif)
-        TextLbl.Size = UDim2.new(1, -10, 1, -25); TextLbl.Position = UDim2.new(0, 10, 0, 25); TextLbl.BackgroundTransparency = 1; TextLbl.Text = text; TextLbl.TextWrapped = true; TextLbl.Font = Enum.Font.Code; TextLbl.TextSize = 12; TextLbl.TextXAlignment = Enum.TextXAlignment.Left; TextLbl.TextYAlignment = Enum.TextYAlignment.Top
-        RegisterTheme(function(theme) Notif.BackgroundColor3 = theme.WindowBg; Notif.BackgroundTransparency = theme.ElementTransparency; Notif.BorderColor3 = theme.Accent; TitleLbl.TextColor3 = theme.Accent; TextLbl.TextColor3 = theme.Text end)
-        Tween(Wrapper, {Size = UDim2.new(1, 0, 0, 60)}, 0.4); Tween(Notif, {Position = UDim2.new(0, 0, 0, 0)}, 0.4)
+        local Wrapper = Instance.new("Frame")
+        Wrapper.Size = UDim2.new(1, 0, 0, 0)
+        Wrapper.BackgroundTransparency = 1
+        Wrapper.ClipsDescendants = true
+        Wrapper.Parent = NotifContainer
+
+        local Notif = Instance.new("Frame")
+        Notif.Size = UDim2.new(1, 0, 1, 0)
+        Notif.Position = UDim2.new(1, 50, 0, 0)
+        Notif.BorderSizePixel = 1
+        Notif.Parent = Wrapper
+
+        local TitleLbl = Instance.new("TextLabel")
+        TitleLbl.Size = UDim2.new(1, -10, 0, 20)
+        TitleLbl.Position = UDim2.new(0, 10, 0, 5)
+        TitleLbl.BackgroundTransparency = 1
+        TitleLbl.Text = title
+        TitleLbl.Font = Enum.Font.Code
+        TitleLbl.TextSize = 14
+        TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        TitleLbl.Parent = Notif
+
+        local TextLbl = Instance.new("TextLabel")
+        TextLbl.Size = UDim2.new(1, -10, 1, -25)
+        TextLbl.Position = UDim2.new(0, 10, 0, 25)
+        TextLbl.BackgroundTransparency = 1
+        TextLbl.Text = text
+        TextLbl.TextWrapped = true
+        TextLbl.Font = Enum.Font.Code
+        TextLbl.TextSize = 12
+        TextLbl.TextXAlignment = Enum.TextXAlignment.Left
+        TextLbl.TextYAlignment = Enum.TextYAlignment.Top
+        TextLbl.Parent = Notif
+
+        RegisterTheme(function(theme) 
+            Notif.BackgroundColor3 = theme.WindowBg
+            Notif.BackgroundTransparency = theme.ElementTransparency
+            Notif.BorderColor3 = theme.Accent
+            TitleLbl.TextColor3 = theme.Accent
+            TextLbl.TextColor3 = theme.Text 
+        end)
+
+        Tween(Wrapper, UDim2.new(1, 0, 0, 60), 0.4)
+        Tween(Notif, {Position = UDim2.new(0, 0, 0, 0)}, 0.4)
+
         task.spawn(function()
             task.wait(duration or 3)
-            local slideOut = Tween(Notif, {Position = UDim2.new(1, 260, 0, 0)}, 0.4); slideOut.Completed:Wait()
-            local collapse = Tween(Wrapper, {Size = UDim2.new(1, 0, 0, 0)}, 0.3); collapse.Completed:Wait()
+            local slideOut = Tween(Notif, {Position = UDim2.new(1, 260, 0, 0)}, 0.4)
+            slideOut.Completed:Wait()
+            local collapse = Tween(Wrapper, UDim2.new(1, 0, 0, 0), 0.3)
+            collapse.Completed:Wait()
             Wrapper:Destroy()
         end)
     end
 
+    -- =====================================================================
+    -- HÀM TẠO TAB NÊN (CREATE TAB)
+    -- =====================================================================
     function WindowObj:CreateTab(tabName)
-        local TabButton = Instance.new("TextButton", TabScroll)
+        local TabButton = Instance.new("TextButton")
         TabButton.Name = tabName .. "_Tab"
         TabButton.Text = tabName
         TabButton.BorderSizePixel = 1
         TabButton.Font = Enum.Font.Code
         TabButton.TextSize = 13
+        TabButton.Parent = TabScroll
         
-        local TextBounds = game:GetService("TextService"):GetTextSize(tabName, 13, Enum.Font.Code, Vector2.new(math.huge, 30))
+        local TextBounds = TextService:GetTextSize(tabName, 13, Enum.Font.Code, Vector2.new(math.huge, 30))
         TabButton.Size = UDim2.new(0, TextBounds.X + 20, 1, -4)
 
-        local TabPage = Instance.new("ScrollingFrame", ContentArea)
+        local TabPage = Instance.new("ScrollingFrame")
         TabPage.Name = tabName .. "_Page"
         TabPage.Size = UDim2.new(1, -10, 1, -10)
         TabPage.Position = UDim2.new(0, 5, 0, 5)
@@ -311,115 +440,150 @@ function IrisLib.CreateWindow(titleText, defaultSize)
         TabPage.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
         TabPage.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
         TabPage.Visible = false
+        TabPage.Parent = ContentArea
         
-        local PageLayout = Instance.new("UIListLayout", TabPage)
-        PageLayout.SortOrder = Enum.SortOrder.LayoutOrder; PageLayout.Padding = UDim.new(0, 4)
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        PageLayout.Padding = UDim.new(0, 4)
+        PageLayout.Parent = TabPage
 
         RegisterTheme(function(theme)
-            TabButton.BorderColor3 = theme.Border; TabButton.TextColor3 = theme.Text; TabButton.BackgroundTransparency = theme.ElementTransparency
-            TabButton.BackgroundColor3 = (WindowObj.CurrentTab == tabName) and theme.Accent or theme.ElementBg
+            TabButton.BorderColor3 = theme.Border
+            TabButton.TextColor3 = theme.Text
+            TabButton.BackgroundTransparency = theme.ElementTransparency
+            if WindowObj.CurrentTab == tabName then
+                TabButton.BackgroundColor3 = theme.Accent
+            else
+                TabButton.BackgroundColor3 = theme.ElementBg
+            end
         end)
 
         TabButton.MouseButton1Click:Connect(function()
             WindowObj.CurrentTab = tabName
-            for _, t in pairs(WindowObj.Tabs) do t.Page.Visible = false end
-            TabPage.Visible = true; WindowObj:SetMainColor(WindowObj.Theme.Accent); SearchBox.Text = "" 
+            for _, t in pairs(WindowObj.Tabs) do 
+                t.Page.Visible = false 
+            end
+            TabPage.Visible = true
+            WindowObj:SetMainColor(WindowObj.Theme.Accent)
+            SearchBox.Text = "" 
         end)
-        if #WindowObj.Tabs == 0 then WindowObj.CurrentTab = tabName; TabPage.Visible = true end
+
+        if #WindowObj.Tabs == 0 then 
+            WindowObj.CurrentTab = tabName
+            TabPage.Visible = true 
+        end
+        
         table.insert(WindowObj.Tabs, {Button = TabButton, Page = TabPage})
 
+        -- =====================================================================
+        -- HÀM THÊM ELEMENT VÀO CONTAINER (APPEND ELEMENTS)
+        -- =====================================================================
         local function AppendElements(container, parentSection)
             local Elements = {}
             
             local function RegisterElement(frame, text) 
-                text = text or ""
                 table.insert(WindowObj.ElementsCache, {
                     Frame = frame, 
-                    Text = text:lower(), 
+                    Text = (text or ""):lower(), 
                     Tab = tabName, 
-                    Section = parentSection 
+                    Section = parentSection
                 }) 
             end
 
+            -- 1. Create Divider
             function Elements:CreateDivider()
-                local Div = Instance.new("Frame", container)
-                Div.Size = UDim2.new(1, -8, 0, 1); Div.BorderSizePixel = 0
-                RegisterTheme(function(theme) Div.BackgroundColor3 = theme.Border; Div.BackgroundTransparency = theme.ElementTransparency end)
+                local Div = Instance.new("Frame")
+                Div.Size = UDim2.new(1, -8, 0, 1)
+                Div.BorderSizePixel = 0
+                Div.Parent = container
+
+                RegisterTheme(function(theme) 
+                    Div.BackgroundColor3 = theme.Border
+                    Div.BackgroundTransparency = theme.ElementTransparency 
+                end)
+
                 RegisterElement(Div, "")
             end
 
-            -- FIX LABEL: Sửa logic tự giãn dòng TextWrapped
+            -- 2. Create Label (Hỗ trợ \n và tự động giãn dòng khi Resize)
             function Elements:CreateLabel(text)
-                local Label = Instance.new("TextLabel", container)
-                -- Đặt Size Y = 0 để nó tự bung từ trong ra theo chữ
+                local Label = Instance.new("TextLabel")
                 Label.Size = UDim2.new(1, -8, 0, 0)
                 Label.AutomaticSize = Enum.AutomaticSize.Y
-                Label.TextWrapped = true -- Bật Wrap để hỗ trợ \n
-                
+                Label.TextWrapped = true 
                 Label.BackgroundTransparency = 1
                 Label.Text = text
                 Label.Font = Enum.Font.Code
                 Label.TextSize = 13
                 Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.TextYAlignment = Enum.TextYAlignment.Top -- Ép lên Top để không bị tràn lệch khi nhiều dòng
+                Label.TextYAlignment = Enum.TextYAlignment.Top
+                Label.Parent = container
                 
-                RegisterTheme(function(theme) Label.TextColor3 = theme.Text end); RegisterElement(Label, text)
+                RegisterTheme(function(theme) 
+                    Label.TextColor3 = theme.Text 
+                end)
                 
-                local LabelHandler = {}
-                function LabelHandler:SetTitle(newText) Label.Text = newText end
-                function LabelHandler:SetText(newText) Label.Text = newText end
-                return LabelHandler
+                RegisterElement(Label, text)
+                
+                local handler = {}
+                function handler:SetText(newText) 
+                    Label.Text = newText 
+                end
+                return handler
             end
 
-            -- FIX PARAGRAPH: Sửa logic của Title và Text để hiển thị \n chuẩn 100%
+            -- 3. Create Paragraph (Hỗ trợ nhiều dòng tiêu đề & nội dung)
             function Elements:CreateParagraph(titleText, contentText)
-                titleText = titleText or "Paragraph"
-                contentText = contentText or ""
-
-                local ParaFrame = Instance.new("Frame", container)
+                local ParaFrame = Instance.new("Frame")
                 ParaFrame.Size = UDim2.new(1, -8, 0, 0) 
                 ParaFrame.BorderSizePixel = 1
                 ParaFrame.AutomaticSize = Enum.AutomaticSize.Y 
                 ParaFrame.ClipsDescendants = true
+                ParaFrame.Parent = container
                 
-                local UIPadding = Instance.new("UIPadding", ParaFrame)
+                local UIPadding = Instance.new("UIPadding")
                 UIPadding.PaddingTop = UDim.new(0, 4)
                 UIPadding.PaddingBottom = UDim.new(0, 4)
                 UIPadding.PaddingLeft = UDim.new(0, 5)
                 UIPadding.PaddingRight = UDim.new(0, 5)
+                UIPadding.Parent = ParaFrame
 
-                local ParaLayout = Instance.new("UIListLayout", ParaFrame)
+                local ParaLayout = Instance.new("UIListLayout")
                 ParaLayout.SortOrder = Enum.SortOrder.LayoutOrder
                 ParaLayout.Padding = UDim.new(0, 4)
+                ParaLayout.Parent = ParaFrame
 
-                local Title = Instance.new("TextLabel", ParaFrame)
-                Title.Size = UDim2.new(1, 0, 0, 0) -- Set về 0 để tự bung
+                local Title = Instance.new("TextLabel")
+                Title.Size = UDim2.new(1, 0, 0, 0)
                 Title.AutomaticSize = Enum.AutomaticSize.Y
                 Title.TextWrapped = true
                 Title.BackgroundTransparency = 1
-                Title.Text = titleText
+                Title.Text = titleText or "Paragraph"
                 Title.Font = Enum.Font.Code
                 Title.TextSize = 15
                 Title.TextXAlignment = Enum.TextXAlignment.Left
                 Title.TextYAlignment = Enum.TextYAlignment.Top
+                Title.Parent = ParaFrame
 
-                local Div = Instance.new("Frame", ParaFrame)
+                local Div = Instance.new("Frame")
                 Div.Size = UDim2.new(1, 0, 0, 1)
                 Div.BorderSizePixel = 0
+                Div.Parent = ParaFrame
 
-                local Content = Instance.new("TextLabel", ParaFrame)
-                Content.Size = UDim2.new(1, 0, 0, 0) -- Set về 0 để tự bung
+                local Content = Instance.new("TextLabel")
+                Content.Size = UDim2.new(1, 0, 0, 0)
                 Content.AutomaticSize = Enum.AutomaticSize.Y
                 Content.TextWrapped = true
                 Content.BackgroundTransparency = 1
-                Content.Text = contentText
+                Content.Text = contentText or ""
                 Content.Font = Enum.Font.Code
                 Content.TextSize = 13
                 Content.TextXAlignment = Enum.TextXAlignment.Left
                 Content.TextYAlignment = Enum.TextYAlignment.Top
+                Content.Parent = ParaFrame
 
                 local function UpdateVisibility()
-                    local hasText = (contentText ~= nil and contentText ~= "")
+                    local hasText = (Content.Text ~= "")
                     Content.Visible = hasText
                     Div.Visible = hasText
                 end
@@ -429,7 +593,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     ParaFrame.BackgroundColor3 = theme.ElementBg
                     ParaFrame.BorderColor3 = theme.Border
                     ParaFrame.BackgroundTransparency = theme.ElementTransparency
-                    Title.TextColor3 = theme.Accent 
+                    Title.TextColor3 = theme.Accent
                     Div.BackgroundColor3 = theme.Border
                     Div.BackgroundTransparency = theme.ElementTransparency
                     Content.TextColor3 = theme.Text
@@ -438,117 +602,217 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 RegisterElement(ParaFrame, titleText .. " " .. contentText)
 
                 local handler = {}
-                function handler:SetTitle(newTitle)
-                    titleText = newTitle or ""
-                    Title.Text = titleText
+                function handler:SetTitle(newTitle) 
+                    Title.Text = newTitle or "" 
                 end
-                function handler:SetText(newText)
-                    contentText = newText or ""
-                    Content.Text = contentText
-                    UpdateVisibility()
+                function handler:SetText(newText) 
+                    Content.Text = newText or ""
+                    UpdateVisibility() 
                 end
                 return handler
             end
 
-            -- FIX IMAGE: Chia tách Fixed Size (ScaleType Stretch) và Không Size (ScaleType Fit + Size Responsive)
+            -- 4. Create Image (Cách ly hoàn toàn khỏi BackgroundTransparency)
             function Elements:CreateImage(imageId, size)
-                local ImgLabel = Instance.new("ImageLabel", container)
+                local ImgLabel = Instance.new("ImageLabel")
                 ImgLabel.BorderSizePixel = 1
-                ImgLabel.BorderColor3 = Color3.fromRGB(255, 255, 255)
+                ImgLabel.BackgroundTransparency = 1 -- Giữ nền ảnh luôn sạch để không bị đè màu
+                ImgLabel.Parent = container
                 
                 if size then
-                    -- Khi người dùng nhập size cụ thể (cố định) -> Ép ảnh Stretch khít hoàn toàn vào viền.
                     ImgLabel.Size = size
                     ImgLabel.ScaleType = Enum.ScaleType.Stretch 
                 else
-                    -- Khi người dùng KHÔNG nhập size -> Lấy size mặc định, tự động cân bằng tỉ lệ ảnh bên trong.
                     ImgLabel.Size = UDim2.new(1, -8, 0, 150)
                     ImgLabel.ScaleType = Enum.ScaleType.Fit
                 end
                 
                 local function parseImageId(id)
-                    if type(id) == "number" then return "rbxassetid://" .. id end
+                    if type(id) == "number" then 
+                        return "rbxassetid://" .. id 
+                    end
                     if type(id) == "string" then
-                        if id:find("rbxassetid://") or id:find("http") or id:find("rbxasset://") then return id end
+                        if id:find("rbxassetid://") or id:find("http") or id:find("rbxasset://") then 
+                            return id 
+                        end
                         local num = id:match("%d+")
-                        if num then return "rbxassetid://" .. num end
+                        if num then 
+                            return "rbxassetid://" .. num 
+                        end
                     end
                     return ""
                 end
-                
                 ImgLabel.Image = parseImageId(imageId)
                 
                 RegisterTheme(function(theme)
-                    ImgLabel.BackgroundColor3 = theme.ElementBg
-                    ImgLabel.BackgroundTransparency = theme.ElementTransparency
-                    ImgLabel.ImageTransparency = theme.ElementTransparency
+                    ImgLabel.BorderColor3 = theme.Border
+                    -- Ngắt liên kết ImageTransparency để ảnh giữ nguyên độ nét 100%
                 end)
-                
+
                 RegisterElement(ImgLabel, "image")
                 
                 local handler = {}
-                function handler:SetImage(newId)
-                    ImgLabel.Image = parseImageId(newId)
+                function handler:SetImage(newId) 
+                    ImgLabel.Image = parseImageId(newId) 
                 end
-                function handler:SetSize(newSize)
+                function handler:SetSize(newSize) 
                     ImgLabel.Size = newSize
-                    -- Khi đổi thành size cứng thì set lại Stretch để ép khít
-                    ImgLabel.ScaleType = Enum.ScaleType.Stretch
+                    ImgLabel.ScaleType = Enum.ScaleType.Stretch 
                 end
                 return handler
             end
 
-            -- Đảm bảo Button nếu Text dài quá cũng tự co giãn không văng viền
+            -- 5. Create Button
             function Elements:CreateButton(text, callback)
-                local Btn = Instance.new("TextButton", container)
-                Btn.Size = UDim2.new(1, -8, 0, 22) -- Size chuẩn tối thiểu
+                local Btn = Instance.new("TextButton")
+                Btn.Size = UDim2.new(1, -8, 0, 22)
                 Btn.AutomaticSize = Enum.AutomaticSize.Y 
                 Btn.TextWrapped = true
-                Btn.BorderSizePixel = 1; Btn.Text = text; Btn.Font = Enum.Font.Code; Btn.TextSize = 13
+                Btn.BorderSizePixel = 1
+                Btn.Text = text
+                Btn.Font = Enum.Font.Code
+                Btn.TextSize = 13
+                Btn.Parent = container
+                
                 Btn.MouseButton1Click:Connect(callback)
-                RegisterTheme(function(theme) Btn.BackgroundColor3 = theme.ElementBg; Btn.BorderColor3 = theme.Border; Btn.TextColor3 = theme.Text; Btn.BackgroundTransparency = theme.ElementTransparency end)
+
+                RegisterTheme(function(theme) 
+                    Btn.BackgroundColor3 = theme.ElementBg
+                    Btn.BorderColor3 = theme.Border
+                    Btn.TextColor3 = theme.Text
+                    Btn.BackgroundTransparency = theme.ElementTransparency 
+                end)
+
                 RegisterElement(Btn, text)
             end
 
+            -- 6. Create Toggle (Lắng nghe AbsoluteSize khi Resize góc Window)
             function Elements:CreateToggle(text, default, callback)
                 local state = default or false
-                local Frame = Instance.new("Frame", container)
-                Frame.Size = UDim2.new(1, -8, 0, 20); Frame.BackgroundTransparency = 1
-                local CheckBox = Instance.new("TextButton", Frame)
-                CheckBox.Size = UDim2.new(0, 16, 0, 16); CheckBox.Position = UDim2.new(0, 0, 0, 2); CheckBox.BorderSizePixel = 1; CheckBox.Text = ""; CheckBox.Font = Enum.Font.Code
-                local Fill = Instance.new("Frame", CheckBox)
-                Fill.Size = state and UDim2.new(1, 0, 1, 0) or UDim2.new(0, 0, 0, 0); Fill.Position = UDim2.new(0.5, 0, 0.5, 0); Fill.AnchorPoint = Vector2.new(0.5, 0.5); Fill.BorderSizePixel = 0
-                local Label = Instance.new("TextButton", Frame)
-                Label.Size = UDim2.new(1, -24, 1, 0); Label.Position = UDim2.new(0, 24, 0, 0); Label.BackgroundTransparency = 1; Label.Text = text; Label.Font = Enum.Font.Code; Label.TextSize = 13; Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.TextWrapped = true -- Cho phép gập chữ an toàn
                 
-                RegisterTheme(function(theme) CheckBox.BackgroundColor3 = theme.ElementBg; CheckBox.BorderColor3 = theme.Border; CheckBox.BackgroundTransparency = theme.ElementTransparency; Fill.BackgroundColor3 = theme.Accent; Label.TextColor3 = theme.Text end)
+                local Frame = Instance.new("Frame")
+                Frame.Size = UDim2.new(1, -8, 0, 20)
+                Frame.BackgroundTransparency = 1
+                Frame.Parent = container
+
+                local CheckBox = Instance.new("TextButton")
+                CheckBox.Size = UDim2.new(0, 16, 0, 16)
+                CheckBox.Position = UDim2.new(0, 0, 0, 2)
+                CheckBox.BorderSizePixel = 1
+                CheckBox.Text = ""
+                CheckBox.Font = Enum.Font.Code
+                CheckBox.Parent = Frame
+
+                local Fill = Instance.new("Frame")
+                if state then
+                    Fill.Size = UDim2.new(1, 0, 1, 0)
+                else
+                    Fill.Size = UDim2.new(0, 0, 0, 0)
+                end
+                Fill.Position = UDim2.new(0.5, 0, 0.5, 0)
+                Fill.AnchorPoint = Vector2.new(0.5, 0.5)
+                Fill.BorderSizePixel = 0
+                Fill.Parent = CheckBox
+                
+                local Label = Instance.new("TextButton")
+                Label.Size = UDim2.new(1, -24, 0, 20)
+                Label.Position = UDim2.new(0, 24, 0, 0)
+                Label.BackgroundTransparency = 1
+                Label.Text = text
+                Label.Font = Enum.Font.Code
+                Label.TextSize = 13
+                Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.TextYAlignment = Enum.TextYAlignment.Top
+                Label.TextWrapped = true 
+                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.Parent = Frame
+                
+                -- Hàm điều chỉnh kích thước bọc ngoài khi chữ rớt dòng do Resize hẹp cửa sổ
+                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    Frame.Size = UDim2.new(1, -8, 0, math.max(20, Label.AbsoluteSize.Y))
+                end)
+                
+                RegisterTheme(function(theme) 
+                    CheckBox.BackgroundColor3 = theme.ElementBg
+                    CheckBox.BorderColor3 = theme.Border
+                    CheckBox.BackgroundTransparency = theme.ElementTransparency
+                    Fill.BackgroundColor3 = theme.Accent
+                    Label.TextColor3 = theme.Text 
+                end)
                 
                 local function trigger() 
                     state = not state
-                    Tween(Fill, {Size = state and UDim2.new(1, 0, 1, 0) or UDim2.new(0, 0, 0, 0)}, 0.15)
+                    if state then
+                        Tween(Fill, {Size = UDim2.new(1, 0, 1, 0)}, 0.15)
+                    else
+                        Tween(Fill, {Size = UDim2.new(0, 0, 0, 0)}, 0.15)
+                    end
                     callback(state) 
                 end
-                CheckBox.MouseButton1Click:Connect(trigger); Label.MouseButton1Click:Connect(trigger); RegisterElement(Frame, text)
+
+                CheckBox.MouseButton1Click:Connect(trigger)
+                Label.MouseButton1Click:Connect(trigger)
+                
+                RegisterElement(Frame, text)
             end
 
+            -- 7. Create Slider (Tự động tính tọa độ kéo/đẩy thanh trượt khi thu phóng)
             function Elements:CreateSlider(text, min, max, default, callback)
                 local value = default or min
-                local Frame = Instance.new("Frame", container)
-                Frame.Size = UDim2.new(1, -8, 0, 35); Frame.BackgroundTransparency = 1
-                local Label = Instance.new("TextLabel", Frame)
-                Label.Size = UDim2.new(1, -40, 0, 15); Label.BackgroundTransparency = 1; Label.Text = text; Label.Font = Enum.Font.Code; Label.TextSize = 13; Label.TextXAlignment = Enum.TextXAlignment.Left
-                local ValLabel = Instance.new("TextLabel", Frame)
-                ValLabel.Size = UDim2.new(0, 40, 0, 15); ValLabel.Position = UDim2.new(1, -40, 0, 0); ValLabel.BackgroundTransparency = 1; ValLabel.Text = tostring(value); ValLabel.Font = Enum.Font.Code; ValLabel.TextSize = 13; ValLabel.TextXAlignment = Enum.TextXAlignment.Right
-                local SliderBg = Instance.new("TextButton", Frame)
-                SliderBg.Size = UDim2.new(1, 0, 0, 10); SliderBg.Position = UDim2.new(0, 0, 0, 20); SliderBg.BorderSizePixel = 1; SliderBg.Text = ""
-                local Fill = Instance.new("Frame", SliderBg)
-                Fill.Size = UDim2.new((value - min)/(max - min), 0, 1, 0); Fill.BorderSizePixel = 0
+                
+                local Frame = Instance.new("Frame")
+                Frame.Size = UDim2.new(1, -8, 0, 35)
+                Frame.BackgroundTransparency = 1
+                Frame.Parent = container
+                
+                local Label = Instance.new("TextLabel")
+                Label.Size = UDim2.new(1, -40, 0, 15)
+                Label.BackgroundTransparency = 1
+                Label.Text = text
+                Label.Font = Enum.Font.Code
+                Label.TextSize = 13
+                Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.TextYAlignment = Enum.TextYAlignment.Top
+                Label.TextWrapped = true
+                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.Parent = Frame
+                
+                local ValLabel = Instance.new("TextLabel")
+                ValLabel.Size = UDim2.new(0, 40, 0, 15)
+                ValLabel.Position = UDim2.new(1, -40, 0, 0)
+                ValLabel.BackgroundTransparency = 1
+                ValLabel.Text = tostring(value)
+                ValLabel.Font = Enum.Font.Code
+                ValLabel.TextSize = 13
+                ValLabel.TextXAlignment = Enum.TextXAlignment.Right
+                ValLabel.Parent = Frame
+                
+                local SliderBg = Instance.new("TextButton")
+                SliderBg.Size = UDim2.new(1, 0, 0, 10)
+                SliderBg.Position = UDim2.new(0, 0, 0, 20)
+                SliderBg.BorderSizePixel = 1
+                SliderBg.Text = ""
+                SliderBg.Parent = Frame
 
-                RegisterTheme(function(theme)
-                    Label.TextColor3 = theme.Text; ValLabel.TextColor3 = theme.Text
-                    SliderBg.BackgroundColor3 = theme.ElementBg; SliderBg.BorderColor3 = theme.Border; SliderBg.BackgroundTransparency = theme.ElementTransparency
-                    Fill.BackgroundColor3 = theme.Accent
+                local Fill = Instance.new("Frame")
+                Fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+                Fill.BorderSizePixel = 0
+                Fill.Parent = SliderBg
+
+                -- Khi Text Slider quá dài và xuống dòng, đẩy trục slider xuống dưới
+                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    local newY = Label.AbsoluteSize.Y
+                    SliderBg.Position = UDim2.new(0, 0, 0, newY + 5)
+                    Frame.Size = UDim2.new(1, -8, 0, newY + 20)
+                end)
+
+                RegisterTheme(function(theme) 
+                    Label.TextColor3 = theme.Text
+                    ValLabel.TextColor3 = theme.Text
+                    SliderBg.BackgroundColor3 = theme.ElementBg
+                    SliderBg.BorderColor3 = theme.Border
+                    SliderBg.BackgroundTransparency = theme.ElementTransparency
+                    Fill.BackgroundColor3 = theme.Accent 
                 end)
 
                 local sliding = false
@@ -560,367 +824,743 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     callback(value)
                 end
 
-                SliderBg.InputBegan:Connect(function(input) if IsValidInputBegan(input) then sliding = true; update(input) end end)
-                UserInputService.InputChanged:Connect(function(input) if sliding and IsValidInputChanged(input) then update(input) end end)
-                UserInputService.InputEnded:Connect(function(input) if IsValidInputBegan(input) then sliding = false end end)
+                SliderBg.InputBegan:Connect(function(input) 
+                    if IsValidInputBegan(input) then 
+                        sliding = true
+                        update(input) 
+                    end 
+                end)
+                
+                UserInputService.InputChanged:Connect(function(input) 
+                    if sliding and IsValidInputChanged(input) then 
+                        update(input) 
+                    end 
+                end)
+                
+                UserInputService.InputEnded:Connect(function(input) 
+                    if IsValidInputBegan(input) then 
+                        sliding = false 
+                    end 
+                end)
+
                 RegisterElement(Frame, text)
             end
 
+            -- 8. Create TextBox
             function Elements:CreateTextBox(text, placeholder, callback)
-                placeholder = placeholder or "Enter text..."
-                local Frame = Instance.new("Frame", container)
+                local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BackgroundTransparency = 1
+                Frame.Parent = container
                 
-                local Label = Instance.new("TextLabel", Frame)
-                Label.Size = UDim2.new(0.5, -5, 1, 0)
+                local Label = Instance.new("TextLabel")
+                Label.Size = UDim2.new(0.5, -5, 0, 22)
                 Label.BackgroundTransparency = 1
                 Label.Text = text
                 Label.Font = Enum.Font.Code
                 Label.TextSize = 13
                 Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.TextYAlignment = Enum.TextYAlignment.Top
                 Label.TextWrapped = true
+                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.Parent = Frame
                 
-                local TBox = Instance.new("TextBox", Frame)
-                TBox.Size = UDim2.new(0.5, 5, 1, 0)
+                local TBox = Instance.new("TextBox")
+                TBox.Size = UDim2.new(0.5, 5, 0, 22)
                 TBox.Position = UDim2.new(0.5, 0, 0, 0)
                 TBox.BorderSizePixel = 1
                 TBox.Text = ""
-                TBox.PlaceholderText = placeholder
+                TBox.PlaceholderText = placeholder or "Enter..."
                 TBox.Font = Enum.Font.Code
                 TBox.TextSize = 12
                 TBox.ClearTextOnFocus = false
+                TBox.Parent = Frame
 
-                RegisterTheme(function(theme)
+                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    local h = math.max(22, Label.AbsoluteSize.Y)
+                    Frame.Size = UDim2.new(1, -8, 0, h)
+                    TBox.Size = UDim2.new(0.5, 5, 0, h)
+                end)
+
+                RegisterTheme(function(theme) 
                     Label.TextColor3 = theme.Text
                     TBox.BackgroundColor3 = theme.ElementBg
                     TBox.BorderColor3 = theme.Border
                     TBox.TextColor3 = theme.Text
-                    TBox.BackgroundTransparency = theme.ElementTransparency
+                    TBox.BackgroundTransparency = theme.ElementTransparency 
                 end)
                 
-                TBox.FocusLost:Connect(function(enter) callback(TBox.Text, enter) end)
+                TBox.FocusLost:Connect(function(enter) 
+                    callback(TBox.Text, enter) 
+                end)
+                
                 RegisterElement(Frame, text)
                 
                 local handler = {}
-                function handler:SetText(newText) TBox.Text = newText end
+                function handler:SetText(newText) 
+                    TBox.Text = newText 
+                end
                 return handler
             end
 
+            -- 9. Create Dropdown
             function Elements:CreateDropdown(text, options, default, callback)
                 options = options or {}
                 local selected = default or options[1] or ""
                 local open = false
-                local Frame = Instance.new("Frame", container)
-                Frame.Size = UDim2.new(1, -8, 0, 22); Frame.BorderSizePixel = 1; Frame.ClipsDescendants = true
-                local ToggleBtn = Instance.new("TextButton", Frame)
-                ToggleBtn.Size = UDim2.new(1, 0, 0, 22); ToggleBtn.BackgroundTransparency = 1; ToggleBtn.Text = " ► " .. text .. " [" .. tostring(selected) .. "]"; ToggleBtn.Font = Enum.Font.Code; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
-                ToggleBtn.TextWrapped = true
                 
-                local DropArea = Instance.new("ScrollingFrame", Frame)
+                local Frame = Instance.new("Frame")
+                Frame.Size = UDim2.new(1, -8, 0, 22)
+                Frame.BorderSizePixel = 1
+                Frame.ClipsDescendants = true
+                Frame.Parent = container
+                
+                local ToggleBtn = Instance.new("TextButton")
+                ToggleBtn.Size = UDim2.new(1, 0, 0, 22)
+                ToggleBtn.BackgroundTransparency = 1
+                ToggleBtn.Text = " ► " .. text .. " [" .. tostring(selected) .. "]"
+                ToggleBtn.Font = Enum.Font.Code
+                ToggleBtn.TextSize = 13
+                ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+                ToggleBtn.TextYAlignment = Enum.TextYAlignment.Top
+                ToggleBtn.TextWrapped = true
+                ToggleBtn.AutomaticSize = Enum.AutomaticSize.Y
+                ToggleBtn.Parent = Frame
+                
+                local DropArea = Instance.new("ScrollingFrame")
                 DropArea.Size = UDim2.new(1, 0, 0, 100)
                 DropArea.Position = UDim2.new(0, 0, 0, 22)
                 DropArea.BackgroundTransparency = 1
                 DropArea.BorderSizePixel = 0
-                DropArea.CanvasSize = UDim2.new(0, 0, 0, 0) 
+                DropArea.CanvasSize = UDim2.new(0, 0, 0, 0)
                 DropArea.AutomaticCanvasSize = Enum.AutomaticSize.Y
                 DropArea.ScrollBarThickness = 3
                 DropArea.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
+                DropArea.Parent = Frame
                 
-                local DropLayout = Instance.new("UIListLayout", DropArea); DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                local DropLayout = Instance.new("UIListLayout")
+                DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                DropLayout.Parent = DropArea
+
+                local function updateDropSize(animate)
+                    local base = ToggleBtn.AbsoluteSize.Y
+                    DropArea.Position = UDim2.new(0, 0, 0, base)
+                    local targetSize = UDim2.new(1, -8, 0, open and (base + 100) or base)
+                    if animate then 
+                        Tween(Frame, {Size = targetSize}, 0.2) 
+                    else 
+                        Frame.Size = targetSize 
+                    end
+                end
+                
+                ToggleBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
+                    updateDropSize(false) 
+                end)
 
                 local function refreshOptions()
-                    DropArea:ClearAllChildren(); local L = Instance.new("UIListLayout", DropArea); L.SortOrder = Enum.SortOrder.LayoutOrder
-                    local OptButtons = {} 
+                    DropArea:ClearAllChildren()
+                    local L = Instance.new("UIListLayout")
+                    L.SortOrder = Enum.SortOrder.LayoutOrder
+                    L.Parent = DropArea
                     
+                    local OptButtons = {} 
                     for _, opt in ipairs(options) do
-                        local OBtn = Instance.new("TextButton", DropArea); OBtn.Size = UDim2.new(1, -4, 0, 20); OBtn.BorderSizePixel = 0; OBtn.Text = tostring(opt); OBtn.Font = Enum.Font.Code; OBtn.TextSize = 12
+                        local OBtn = Instance.new("TextButton")
+                        OBtn.Size = UDim2.new(1, -4, 0, 20)
+                        OBtn.BorderSizePixel = 0
+                        OBtn.Text = tostring(opt)
+                        OBtn.Font = Enum.Font.Code
+                        OBtn.TextSize = 12
+                        OBtn.Parent = DropArea
+                        
                         table.insert(OptButtons, {Btn = OBtn, Value = opt})
 
                         RegisterTheme(function(theme) 
-                            OBtn.BackgroundColor3 = (selected == opt) and theme.Accent or theme.ElementBg; OBtn.TextColor3 = theme.Text
+                            if selected == opt then
+                                OBtn.BackgroundColor3 = theme.Accent
+                            else
+                                OBtn.BackgroundColor3 = theme.ElementBg
+                            end
+                            OBtn.TextColor3 = theme.Text
                             OBtn.BackgroundTransparency = theme.ElementTransparency
                         end)
+                        
                         OBtn.MouseButton1Click:Connect(function()
-                            selected = opt; ToggleBtn.Text = " ► " .. text .. " [" .. tostring(opt) .. "]"
-                            
-                            if WindowObj.Theme.Accent then
-                                for _, data in ipairs(OptButtons) do
-                                    data.Btn.BackgroundColor3 = (selected == data.Value) and WindowObj.Theme.Accent or WindowObj.Theme.ElementBg
-                                end
+                            selected = opt
+                            ToggleBtn.Text = " ► " .. text .. " [" .. tostring(opt) .. "]"
+                            if WindowObj.Theme.Accent then 
+                                for _, data in ipairs(OptButtons) do 
+                                    if selected == data.Value then
+                                        data.Btn.BackgroundColor3 = WindowObj.Theme.Accent 
+                                    else
+                                        data.Btn.BackgroundColor3 = WindowObj.Theme.ElementBg
+                                    end
+                                end 
                             end
-
-                            callback(opt); open = false
-                            Tween(Frame, {Size = UDim2.new(1, -8, 0, 22)}, 0.2)
+                            callback(opt)
+                            open = false
+                            updateDropSize(true)
                         end)
                     end
                 end
+                
                 refreshOptions()
+                
                 RegisterTheme(function(theme) 
-                    Frame.BackgroundColor3 = theme.ElementBg; Frame.BorderColor3 = theme.Border; ToggleBtn.TextColor3 = theme.Text 
-                    Frame.BackgroundTransparency = theme.ElementTransparency
+                    Frame.BackgroundColor3 = theme.ElementBg
+                    Frame.BorderColor3 = theme.Border
+                    ToggleBtn.TextColor3 = theme.Text
+                    Frame.BackgroundTransparency = theme.ElementTransparency 
                 end)
-                local function toggle() open = not open; ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [" .. tostring(selected) .. "]" ; Tween(Frame, {Size = UDim2.new(1, -8, 0, open and 125 or 22)}, 0.2) end
-                ToggleBtn.MouseButton1Click:Connect(toggle); RegisterElement(Frame, text)
+                
+                ToggleBtn.MouseButton1Click:Connect(function() 
+                    open = not open
+                    if open then
+                        ToggleBtn.Text = " ▼ " .. text .. " [" .. tostring(selected) .. "]"
+                    else
+                        ToggleBtn.Text = " ► " .. text .. " [" .. tostring(selected) .. "]"
+                    end
+                    updateDropSize(true) 
+                end)
+                
+                RegisterElement(Frame, text)
 
                 local handler = {}
-                function handler:Refresh(newOpts) options = newOpts; refreshOptions() end
+                function handler:Refresh(newOpts) 
+                    options = newOpts
+                    refreshOptions() 
+                end
                 return handler
             end
 
+            -- 10. Create MultiDropdown
             function Elements:CreateMultiDropdown(text, options, defaultSelects, callback)
                 options = options or {}
-                defaultSelects = defaultSelects or {}
                 local SelectedOptions = {}
-                for _, v in ipairs(defaultSelects) do SelectedOptions[v] = true end
+                for _, v in ipairs(defaultSelects or {}) do 
+                    SelectedOptions[v] = true 
+                end
                 local open = false
 
-                local Frame = Instance.new("Frame", container)
+                local Frame = Instance.new("Frame")
                 Frame.Size = UDim2.new(1, -8, 0, 22)
                 Frame.BorderSizePixel = 1
                 Frame.ClipsDescendants = true
+                Frame.Parent = container
 
-                local ToggleBtn = Instance.new("TextButton", Frame)
+                local ToggleBtn = Instance.new("TextButton")
                 ToggleBtn.Size = UDim2.new(1, 0, 0, 22)
                 ToggleBtn.BackgroundTransparency = 1
                 ToggleBtn.Font = Enum.Font.Code
                 ToggleBtn.TextSize = 13
                 ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+                ToggleBtn.TextYAlignment = Enum.TextYAlignment.Top
                 ToggleBtn.TextWrapped = true
+                ToggleBtn.AutomaticSize = Enum.AutomaticSize.Y
+                ToggleBtn.Parent = Frame
 
                 local function updateToggleText()
                     local count = 0
                     local first = ""
                     for k, v in pairs(SelectedOptions) do 
                         if v then 
-                            count = count + 1 
-                            if count == 1 then first = k end
+                            count = count + 1
+                            if count == 1 then 
+                                first = k 
+                            end 
                         end 
                     end
-                    
-                    if count == 0 then
-                        ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [None]"
-                    elseif count == 1 then
-                        ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [" .. first .. "]"
-                    else
-                        ToggleBtn.Text = (open and " ▼ " or " ► ") .. text .. " [" .. count .. " Selected]"
+                    local prefix = open and " ▼ " or " ► "
+                    if count == 0 then 
+                        ToggleBtn.Text = prefix .. text .. " [None]"
+                    elseif count == 1 then 
+                        ToggleBtn.Text = prefix .. text .. " [" .. first .. "]"
+                    else 
+                        ToggleBtn.Text = prefix .. text .. " [" .. count .. " Selected]" 
                     end
                 end
                 updateToggleText()
 
-                local DropArea = Instance.new("ScrollingFrame", Frame)
+                local DropArea = Instance.new("ScrollingFrame")
                 DropArea.Size = UDim2.new(1, 0, 0, 100)
                 DropArea.Position = UDim2.new(0, 0, 0, 22)
                 DropArea.BackgroundTransparency = 1
                 DropArea.BorderSizePixel = 0
-                DropArea.CanvasSize = UDim2.new(0, 0, 0, 0) 
+                DropArea.CanvasSize = UDim2.new(0, 0, 0, 0)
                 DropArea.AutomaticCanvasSize = Enum.AutomaticSize.Y
                 DropArea.ScrollBarThickness = 3
                 DropArea.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
+                DropArea.Parent = Frame
                 
-                local DropLayout = Instance.new("UIListLayout", DropArea)
+                local DropLayout = Instance.new("UIListLayout")
                 DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                DropLayout.Parent = DropArea
+
+                local function updateDropSize(animate)
+                    local base = ToggleBtn.AbsoluteSize.Y
+                    DropArea.Position = UDim2.new(0, 0, 0, base)
+                    local targetSize = UDim2.new(1, -8, 0, open and (base + 100) or base)
+                    if animate then 
+                        Tween(Frame, {Size = targetSize}, 0.2) 
+                    else 
+                        Frame.Size = targetSize 
+                    end
+                end
+                
+                ToggleBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
+                    updateDropSize(false) 
+                end)
 
                 local function fireCb()
                     local ret = {}
-                    for k, v in pairs(SelectedOptions) do if v then table.insert(ret, k) end end
-                    if callback then callback(ret) end
+                    for k, v in pairs(SelectedOptions) do 
+                        if v then 
+                            table.insert(ret, k) 
+                        end 
+                    end
+                    if callback then 
+                        callback(ret) 
+                    end
                 end
 
                 local function refreshOptions()
                     DropArea:ClearAllChildren()
-                    local L = Instance.new("UIListLayout", DropArea)
+                    local L = Instance.new("UIListLayout")
                     L.SortOrder = Enum.SortOrder.LayoutOrder
+                    L.Parent = DropArea
                     
                     for _, opt in ipairs(options) do
-                        local OBtn = Instance.new("TextButton", DropArea)
+                        local OBtn = Instance.new("TextButton")
                         OBtn.Size = UDim2.new(1, -4, 0, 20)
                         OBtn.BorderSizePixel = 0
                         OBtn.Font = Enum.Font.Code
                         OBtn.TextSize = 12
+                        OBtn.Parent = DropArea
                         
-                        local function updateOptVisual()
-                            OBtn.Text = (SelectedOptions[opt] and "✓ " or "  ") .. tostring(opt)
-                            if WindowObj.Theme.Accent then
-                                OBtn.BackgroundColor3 = SelectedOptions[opt] and WindowObj.Theme.Accent or WindowObj.Theme.ElementBg
+                        local function updateOptVisual() 
+                            if SelectedOptions[opt] then
+                                OBtn.Text = "✓ " .. tostring(opt)
+                            else
+                                OBtn.Text = "  " .. tostring(opt)
                             end
+                            if WindowObj.Theme.Accent then 
+                                if SelectedOptions[opt] then
+                                    OBtn.BackgroundColor3 = WindowObj.Theme.Accent
+                                else
+                                    OBtn.BackgroundColor3 = WindowObj.Theme.ElementBg
+                                end
+                            end 
                         end
                         updateOptVisual()
 
                         RegisterTheme(function(theme) 
-                            OBtn.BackgroundColor3 = SelectedOptions[opt] and theme.Accent or theme.ElementBg
+                            if SelectedOptions[opt] then
+                                OBtn.BackgroundColor3 = theme.Accent
+                            else
+                                OBtn.BackgroundColor3 = theme.ElementBg
+                            end
                             OBtn.TextColor3 = theme.Text
-                            OBtn.BackgroundTransparency = theme.ElementTransparency
+                            OBtn.BackgroundTransparency = theme.ElementTransparency 
                         end)
 
-                        OBtn.MouseButton1Click:Connect(function()
+                        OBtn.MouseButton1Click:Connect(function() 
                             SelectedOptions[opt] = not SelectedOptions[opt]
                             updateOptVisual()
                             updateToggleText()
-                            fireCb()
+                            fireCb() 
                         end)
                     end
                 end
                 refreshOptions()
 
                 RegisterTheme(function(theme) 
-                    Frame.BackgroundColor3 = theme.ElementBg; Frame.BorderColor3 = theme.Border
-                    ToggleBtn.TextColor3 = theme.Text; Frame.BackgroundTransparency = theme.ElementTransparency
+                    Frame.BackgroundColor3 = theme.ElementBg
+                    Frame.BorderColor3 = theme.Border
+                    ToggleBtn.TextColor3 = theme.Text
+                    Frame.BackgroundTransparency = theme.ElementTransparency 
                 end)
-
-                local function toggle() 
-                    open = not open 
+                
+                ToggleBtn.MouseButton1Click:Connect(function() 
+                    open = not open
                     updateToggleText()
-                    Tween(Frame, {Size = UDim2.new(1, -8, 0, open and 125 or 22)}, 0.2) 
-                end
-                ToggleBtn.MouseButton1Click:Connect(toggle)
+                    updateDropSize(true) 
+                end)
+                
                 RegisterElement(Frame, text)
 
                 local handler = {}
                 function handler:Refresh(newOpts) 
                     options = newOpts
                     local valid = {}
-                    for _,v in ipairs(newOpts) do valid[v] = true end
-                    for k,_ in pairs(SelectedOptions) do if not valid[k] then SelectedOptions[k] = nil end end
+                    for _, v in ipairs(newOpts) do 
+                        valid[v] = true 
+                    end
+                    for k, _ in pairs(SelectedOptions) do 
+                        if not valid[k] then 
+                            SelectedOptions[k] = nil 
+                        end 
+                    end
                     refreshOptions()
                     updateToggleText()
-                    fireCb()
+                    fireCb() 
                 end
                 return handler
             end
 
+            -- 11. Create Keybind
             function Elements:CreateKeybind(text, defaultKey, callback)
                 local key = defaultKey or Enum.KeyCode.E
                 local binding = false
-                local Frame = Instance.new("Frame", container)
-                Frame.Size = UDim2.new(1, -8, 0, 22); Frame.BackgroundTransparency = 1
-                local Label = Instance.new("TextLabel", Frame)
-                Label.Size = UDim2.new(0.6, 0, 1, 0); Label.BackgroundTransparency = 1; Label.Text = text; Label.Font = Enum.Font.Code; Label.TextSize = 13; Label.TextXAlignment = Enum.TextXAlignment.Left; Label.TextWrapped = true
-                local BindBtn = Instance.new("TextButton", Frame)
-                BindBtn.Size = UDim2.new(0.35, 0, 1, 0); BindBtn.Position = UDim2.new(0.65, 0, 0, 0); BindBtn.BorderSizePixel = 1; BindBtn.Text = key.Name; BindBtn.Font = Enum.Font.Code; BindBtn.TextSize = 12
+                
+                local Frame = Instance.new("Frame")
+                Frame.Size = UDim2.new(1, -8, 0, 22)
+                Frame.BackgroundTransparency = 1
+                Frame.Parent = container
+                
+                local Label = Instance.new("TextLabel")
+                Label.Size = UDim2.new(0.6, 0, 0, 22)
+                Label.BackgroundTransparency = 1
+                Label.Text = text
+                Label.Font = Enum.Font.Code
+                Label.TextSize = 13
+                Label.TextXAlignment = Enum.TextXAlignment.Left
+                Label.TextYAlignment = Enum.TextYAlignment.Top
+                Label.TextWrapped = true
+                Label.AutomaticSize = Enum.AutomaticSize.Y
+                Label.Parent = Frame
+                
+                local BindBtn = Instance.new("TextButton")
+                BindBtn.Size = UDim2.new(0.35, 0, 0, 22)
+                BindBtn.Position = UDim2.new(0.65, 0, 0, 0)
+                BindBtn.BorderSizePixel = 1
+                BindBtn.Text = key.Name
+                BindBtn.Font = Enum.Font.Code
+                BindBtn.TextSize = 12
+                BindBtn.Parent = Frame
+
+                Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                    local h = math.max(22, Label.AbsoluteSize.Y)
+                    Frame.Size = UDim2.new(1, -8, 0, h)
+                    BindBtn.Size = UDim2.new(0.35, 0, 0, h)
+                end)
 
                 RegisterTheme(function(theme) 
-                    Label.TextColor3 = theme.Text; BindBtn.BackgroundColor3 = theme.ElementBg; BindBtn.BorderColor3 = theme.Border; BindBtn.TextColor3 = theme.Text
-                    BindBtn.BackgroundTransparency = theme.ElementTransparency
+                    Label.TextColor3 = theme.Text
+                    BindBtn.BackgroundColor3 = theme.ElementBg
+                    BindBtn.BorderColor3 = theme.Border
+                    BindBtn.TextColor3 = theme.Text
+                    BindBtn.BackgroundTransparency = theme.ElementTransparency 
                 end)
-                BindBtn.MouseButton1Click:Connect(function() binding = true; BindBtn.Text = "..." end)
+                
+                BindBtn.MouseButton1Click:Connect(function() 
+                    binding = true
+                    BindBtn.Text = "..." 
+                end)
+                
                 UserInputService.InputBegan:Connect(function(input, gpe)
                     if binding and not gpe then
-                        if input.UserInputType == Enum.UserInputType.Keyboard then
-                            binding = false; key = input.KeyCode; BindBtn.Text = key.Name; callback(key)
+                        if input.UserInputType == Enum.UserInputType.Keyboard then 
+                            binding = false
+                            key = input.KeyCode
+                            BindBtn.Text = key.Name
+                            callback(key) 
                         end
                     elseif not binding and not gpe then
-                        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == key then callback(key, true) end
+                        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == key then 
+                            callback(key, true) 
+                        end
                     end
                 end)
+                
                 RegisterElement(Frame, text)
             end
 
+            -- 12. Create ColorPicker
             function Elements:CreateColorPicker(text, defaultColor, callback)
-                local color = defaultColor or Color3.fromRGB(255,255,255)
+                local color = defaultColor or Color3.fromRGB(255, 255, 255)
                 local open = false
-                local Frame = Instance.new("Frame", container)
-                Frame.Size = UDim2.new(1, -8, 0, 22); Frame.BorderSizePixel = 1; Frame.ClipsDescendants = true
-                local ToggleBtn = Instance.new("TextButton", Frame)
-                ToggleBtn.Size = UDim2.new(0.8, 0, 0, 22); ToggleBtn.BackgroundTransparency = 1; ToggleBtn.Text = " ► " .. text; ToggleBtn.Font = Enum.Font.Code; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left; ToggleBtn.TextWrapped = true
-                local ColorDisplay = Instance.new("Frame", Frame)
-                ColorDisplay.Size = UDim2.new(0.15, 0, 0, 14); ColorDisplay.Position = UDim2.new(0.82, 0, 0, 4); ColorDisplay.BorderSizePixel = 1; ColorDisplay.BackgroundColor3 = color
-                local DropArea = Instance.new("Frame", Frame)
-                DropArea.Size = UDim2.new(1, 0, 0, 100); DropArea.Position = UDim2.new(0, 0, 0, 22); DropArea.BackgroundTransparency = 1; local tempColor = color
+                
+                local Frame = Instance.new("Frame")
+                Frame.Size = UDim2.new(1, -8, 0, 22)
+                Frame.BorderSizePixel = 1
+                Frame.ClipsDescendants = true
+                Frame.Parent = container
+                
+                local ToggleBtn = Instance.new("TextButton")
+                ToggleBtn.Size = UDim2.new(0.8, 0, 0, 22)
+                ToggleBtn.BackgroundTransparency = 1
+                ToggleBtn.Text = " ► " .. text
+                ToggleBtn.Font = Enum.Font.Code
+                ToggleBtn.TextSize = 13
+                ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+                ToggleBtn.TextYAlignment = Enum.TextYAlignment.Top
+                ToggleBtn.TextWrapped = true
+                ToggleBtn.AutomaticSize = Enum.AutomaticSize.Y
+                ToggleBtn.Parent = Frame
+                
+                local ColorDisplay = Instance.new("Frame")
+                ColorDisplay.Size = UDim2.new(0.15, 0, 0, 14)
+                ColorDisplay.Position = UDim2.new(0.82, 0, 0, 4)
+                ColorDisplay.BorderSizePixel = 1
+                ColorDisplay.BackgroundColor3 = color
+                ColorDisplay.Parent = Frame
+                
+                local DropArea = Instance.new("Frame")
+                DropArea.Size = UDim2.new(1, 0, 0, 100)
+                DropArea.Position = UDim2.new(0, 0, 0, 22)
+                DropArea.BackgroundTransparency = 1
+                DropArea.Parent = Frame
+                
+                local tempColor = color
+
+                local function updatePickerSize(animate)
+                    local base = ToggleBtn.AbsoluteSize.Y
+                    DropArea.Position = UDim2.new(0, 0, 0, base)
+                    ColorDisplay.Position = UDim2.new(0.82, 0, 0, (base - 14) / 2)
+                    local targetSize = UDim2.new(1, -8, 0, open and (base + 105) or base)
+                    if animate then 
+                        Tween(Frame, {Size = targetSize}, 0.25) 
+                    else 
+                        Frame.Size = targetSize 
+                    end
+                end
+                
+                ToggleBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
+                    updatePickerSize(false) 
+                end)
 
                 local function CreateRgbSlider(name, pos, min, max, initial, updateCb)
-                    local SF = Instance.new("Frame", DropArea); SF.Size = UDim2.new(1, -20, 0, 20); SF.Position = UDim2.new(0, 10, 0, pos); SF.BackgroundTransparency = 1
-                    local SN = Instance.new("TextLabel", SF); SN.Size = UDim2.new(0.25, 0, 1, 0); SN.Text = name .. ": " .. tostring(math.floor(initial)); SN.BackgroundTransparency = 1; SN.Font = Enum.Font.Code; SN.TextSize = 13; SN.TextXAlignment = Enum.TextXAlignment.Left
-                    local SB = Instance.new("TextButton", SF); SB.Size = UDim2.new(0.75, 0, 0.4, 0); SB.Position = UDim2.new(0.25, 0, 0.3, 0); SB.BorderSizePixel = 1; SB.Text = ""
-                    local SFill = Instance.new("Frame", SB); SFill.Size = UDim2.new(initial/max, 0, 1, 0); SFill.BorderSizePixel = 0
+                    local SF = Instance.new("Frame")
+                    SF.Size = UDim2.new(1, -20, 0, 20)
+                    SF.Position = UDim2.new(0, 10, 0, pos)
+                    SF.BackgroundTransparency = 1
+                    SF.Parent = DropArea
+                    
+                    local SN = Instance.new("TextLabel")
+                    SN.Size = UDim2.new(0.25, 0, 1, 0)
+                    SN.Text = name .. ": " .. tostring(math.floor(initial))
+                    SN.BackgroundTransparency = 1
+                    SN.Font = Enum.Font.Code
+                    SN.TextSize = 13
+                    SN.TextXAlignment = Enum.TextXAlignment.Left
+                    SN.Parent = SF
+                    
+                    local SB = Instance.new("TextButton")
+                    SB.Size = UDim2.new(0.75, 0, 0.4, 0)
+                    SB.Position = UDim2.new(0.25, 0, 0.3, 0)
+                    SB.BorderSizePixel = 1
+                    SB.Text = ""
+                    SB.Parent = SF
+                    
+                    local SFill = Instance.new("Frame")
+                    SFill.Size = UDim2.new(initial / max, 0, 1, 0)
+                    SFill.BorderSizePixel = 0
+                    SFill.Parent = SB
 
                     RegisterTheme(function(theme)
-                        SN.TextColor3 = theme.Text; SB.BackgroundColor3 = theme.WindowBg; SB.BorderColor3 = theme.Border
+                        SN.TextColor3 = theme.Text
+                        SB.BackgroundColor3 = theme.WindowBg
+                        SB.BorderColor3 = theme.Border
                         SB.BackgroundTransparency = theme.ElementTransparency
-                        if name == "R" then SFill.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-                        elseif name == "G" then SFill.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
-                        else SFill.BackgroundColor3 = Color3.fromRGB(50, 50, 255) end
+                        if name == "R" then 
+                            SFill.BackgroundColor3 = Color3.fromRGB(255, 50, 50) 
+                        elseif name == "G" then 
+                            SFill.BackgroundColor3 = Color3.fromRGB(50, 255, 50) 
+                        else 
+                            SFill.BackgroundColor3 = Color3.fromRGB(50, 50, 255) 
+                        end
                     end)
 
                     local sliding = false
                     local function doUpdate(input)
                         local pct = math.clamp((input.Position.X - SB.AbsolutePosition.X) / SB.AbsoluteSize.X, 0, 1)
                         Tween(SFill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.05)
-                        local val = math.floor(pct * max); SN.Text = name .. ": " .. tostring(val); updateCb(val)
+                        local val = math.floor(pct * max)
+                        SN.Text = name .. ": " .. tostring(val)
+                        updateCb(val)
                     end
-                    SB.InputBegan:Connect(function(input) if IsValidInputBegan(input) then sliding = true; doUpdate(input) end end)
-                    UserInputService.InputChanged:Connect(function(input) if sliding and IsValidInputChanged(input) then doUpdate(input) end end)
-                    UserInputService.InputEnded:Connect(function(input) if IsValidInputBegan(input) then sliding = false end end)
-                    return function(newVal) SN.Text = name .. ": " .. tostring(newVal); Tween(SFill, {Size = UDim2.new(newVal/max, 0, 1, 0)}, 0.2) end
+                    
+                    SB.InputBegan:Connect(function(input) 
+                        if IsValidInputBegan(input) then 
+                            sliding = true
+                            doUpdate(input) 
+                        end 
+                    end)
+                    
+                    UserInputService.InputChanged:Connect(function(input) 
+                        if sliding and IsValidInputChanged(input) then 
+                            doUpdate(input) 
+                        end 
+                    end)
+                    
+                    UserInputService.InputEnded:Connect(function(input) 
+                        if IsValidInputBegan(input) then 
+                            sliding = false 
+                        end 
+                    end)
+                    
+                    return function(newVal) 
+                        SN.Text = name .. ": " .. tostring(newVal)
+                        Tween(SFill, {Size = UDim2.new(newVal / max, 0, 1, 0)}, 0.2) 
+                    end
                 end
 
-                local r, g, b = tempColor.R*255, tempColor.G*255, tempColor.B*255
-                local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v) r = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
-                local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v) g = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
-                local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v) b = v; tempColor = Color3.fromRGB(r, g, b); ColorDisplay.BackgroundColor3 = tempColor end)
+                local r, g, b = tempColor.R * 255, tempColor.G * 255, tempColor.B * 255
+                local setR = CreateRgbSlider("R", 5, 0, 255, r, function(v) r = v tempColor = Color3.fromRGB(r, g, b) ColorDisplay.BackgroundColor3 = tempColor end)
+                local setG = CreateRgbSlider("G", 30, 0, 255, g, function(v) g = v tempColor = Color3.fromRGB(r, g, b) ColorDisplay.BackgroundColor3 = tempColor end)
+                local setB = CreateRgbSlider("B", 55, 0, 255, b, function(v) b = v tempColor = Color3.fromRGB(r, g, b) ColorDisplay.BackgroundColor3 = tempColor end)
 
-                local CancelBtn = Instance.new("TextButton", DropArea); CancelBtn.Size = UDim2.new(0.4, 0, 0, 20); CancelBtn.Position = UDim2.new(0.05, 0, 0, 80); CancelBtn.Text = "Cancel"; CancelBtn.BorderSizePixel = 1; CancelBtn.Font = Enum.Font.Code; CancelBtn.TextSize = 13
-                local ApplyBtn = Instance.new("TextButton", DropArea); ApplyBtn.Size = UDim2.new(0.4, 0, 0, 20); ApplyBtn.Position = UDim2.new(0.55, 0, 0, 80); ApplyBtn.Text = "Apply"; ApplyBtn.BorderSizePixel = 1; ApplyBtn.Font = Enum.Font.Code; ApplyBtn.TextSize = 13
+                local CancelBtn = Instance.new("TextButton")
+                CancelBtn.Size = UDim2.new(0.4, 0, 0, 20)
+                CancelBtn.Position = UDim2.new(0.05, 0, 0, 80)
+                CancelBtn.Text = "Cancel"
+                CancelBtn.BorderSizePixel = 1
+                CancelBtn.Font = Enum.Font.Code
+                CancelBtn.TextSize = 13
+                CancelBtn.Parent = DropArea
+                
+                local ApplyBtn = Instance.new("TextButton")
+                ApplyBtn.Size = UDim2.new(0.4, 0, 0, 20)
+                ApplyBtn.Position = UDim2.new(0.55, 0, 0, 80)
+                ApplyBtn.Text = "Apply"
+                ApplyBtn.BorderSizePixel = 1
+                ApplyBtn.Font = Enum.Font.Code
+                ApplyBtn.TextSize = 13
+                ApplyBtn.Parent = DropArea
 
                 RegisterTheme(function(theme)
-                    Frame.BackgroundColor3 = theme.ElementBg; Frame.BorderColor3 = theme.Border; Frame.BackgroundTransparency = theme.ElementTransparency
-                    ToggleBtn.TextColor3 = theme.Text; ColorDisplay.BorderColor3 = theme.Border
-                    CancelBtn.BackgroundColor3 = theme.WindowBg; CancelBtn.BorderColor3 = theme.Border; CancelBtn.TextColor3 = theme.Text; CancelBtn.BackgroundTransparency = theme.ElementTransparency
-                    ApplyBtn.BackgroundColor3 = theme.Accent; ApplyBtn.BorderColor3 = theme.Border; ApplyBtn.TextColor3 = Color3.new(1,1,1); ApplyBtn.BackgroundTransparency = theme.ElementTransparency
+                    Frame.BackgroundColor3 = theme.ElementBg
+                    Frame.BorderColor3 = theme.Border
+                    Frame.BackgroundTransparency = theme.ElementTransparency
+                    ToggleBtn.TextColor3 = theme.Text
+                    ColorDisplay.BorderColor3 = theme.Border
+                    CancelBtn.BackgroundColor3 = theme.WindowBg
+                    CancelBtn.BorderColor3 = theme.Border
+                    CancelBtn.TextColor3 = theme.Text
+                    CancelBtn.BackgroundTransparency = theme.ElementTransparency
+                    ApplyBtn.BackgroundColor3 = theme.Accent
+                    ApplyBtn.BorderColor3 = theme.Border
+                    ApplyBtn.TextColor3 = Color3.new(1, 1, 1)
+                    ApplyBtn.BackgroundTransparency = theme.ElementTransparency
                 end)
 
-                local function toggle() open = not open; ToggleBtn.Text = (open and " ▼ " or " ► ") .. text; Tween(Frame, {Size = UDim2.new(1, -8, 0, open and 130 or 22)}, 0.25) end
+                local function toggle() 
+                    open = not open
+                    if open then
+                        ToggleBtn.Text = " ▼ " .. text
+                    else
+                        ToggleBtn.Text = " ► " .. text
+                    end
+                    updatePickerSize(true) 
+                end
+                
                 ToggleBtn.MouseButton1Click:Connect(toggle)
                 
                 CancelBtn.MouseButton1Click:Connect(function() 
-                    tempColor = color; 
-                    ColorDisplay.BackgroundColor3 = tempColor; 
-                    r,g,b = tempColor.R*255, tempColor.G*255, tempColor.B*255; 
-                    setR(math.floor(r)); setG(math.floor(g)); setB(math.floor(b)); 
+                    tempColor = color
+                    ColorDisplay.BackgroundColor3 = tempColor
+                    r = tempColor.R * 255
+                    g = tempColor.G * 255
+                    b = tempColor.B * 255
+                    setR(math.floor(r))
+                    setG(math.floor(g))
+                    setB(math.floor(b))
                     toggle() 
                 end)
                 
-                ApplyBtn.MouseButton1Click:Connect(function() color = tempColor; callback(color); toggle() end)
+                ApplyBtn.MouseButton1Click:Connect(function() 
+                    color = tempColor
+                    callback(color)
+                    toggle() 
+                end)
+                
                 RegisterElement(Frame, text)
             end
 
-            -- SECTION FIX: Cập nhật Dynamic Size khi các thành phần con bị đẩy lên xuống bởi \n
+            -- 13. Create Section (Tự động thích ứng khi các phần tử con thay đổi size rớt dòng)
             function Elements:CreateSection(text)
                 local open = false
-                local SecFrame = Instance.new("Frame", container)
-                SecFrame.Size = UDim2.new(1, -8, 0, 22); SecFrame.BorderSizePixel = 1; SecFrame.ClipsDescendants = true
-                local SecBtn = Instance.new("TextButton", SecFrame)
-                SecBtn.Size = UDim2.new(1, 0, 0, 22); SecBtn.BackgroundTransparency = 1; SecBtn.Text = " ► " .. text; SecBtn.Font = Enum.Font.Code; SecBtn.TextSize = 13; SecBtn.TextXAlignment = Enum.TextXAlignment.Left
-                local SecContent = Instance.new("Frame", SecFrame)
-                SecContent.Size = UDim2.new(1, -10, 1, -22); SecContent.Position = UDim2.new(0, 10, 0, 22); SecContent.BackgroundTransparency = 1
-                local SecLayout = Instance.new("UIListLayout", SecContent)
-                SecLayout.SortOrder = Enum.SortOrder.LayoutOrder; SecLayout.Padding = UDim.new(0, 4)
-
-                RegisterTheme(function(theme) SecFrame.BackgroundColor3 = theme.WindowBg; SecFrame.BorderColor3 = theme.Border; SecFrame.BackgroundTransparency = theme.ElementTransparency; SecBtn.TextColor3 = theme.Text end)
-                local function updateSec(animate)
-                    SecBtn.Text = (open and " ▼ " or " ► ") .. text
-                    local newSize = UDim2.new(1, -8, 0, open and (22 + SecLayout.AbsoluteContentSize.Y + 4) or 22)
-                    if animate then Tween(SecFrame, {Size = newSize}, 0.25) else SecFrame.Size = newSize end
-                end
-                SecBtn.MouseButton1Click:Connect(function() open = not open; updateSec(true) end)
                 
-                -- Event này để bắt tín hiệu khi Paragraph hay Label con nhảy dòng \n làm đổi kích thước Section!
-                SecLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() 
-                    if open then updateSec(false) end 
+                local SecFrame = Instance.new("Frame")
+                SecFrame.Size = UDim2.new(1, -8, 0, 22)
+                SecFrame.BorderSizePixel = 1
+                SecFrame.ClipsDescendants = true
+                SecFrame.Parent = container
+                
+                local SecBtn = Instance.new("TextButton")
+                SecBtn.Size = UDim2.new(1, 0, 0, 22)
+                SecBtn.BackgroundTransparency = 1
+                SecBtn.Text = " ► " .. text
+                SecBtn.Font = Enum.Font.Code
+                SecBtn.TextSize = 13
+                SecBtn.TextXAlignment = Enum.TextXAlignment.Left
+                SecBtn.TextYAlignment = Enum.TextYAlignment.Top
+                SecBtn.TextWrapped = true
+                SecBtn.AutomaticSize = Enum.AutomaticSize.Y
+                SecBtn.Parent = SecFrame
+                
+                local SecContent = Instance.new("Frame")
+                SecContent.Size = UDim2.new(1, -10, 1, -22)
+                SecContent.Position = UDim2.new(0, 10, 0, 22)
+                SecContent.BackgroundTransparency = 1
+                SecContent.Parent = SecFrame
+                
+                local SecLayout = Instance.new("UIListLayout")
+                SecLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                SecLayout.Padding = UDim.new(0, 4)
+                SecLayout.Parent = SecContent
+
+                local function updateSec(animate)
+                    if open then
+                        SecBtn.Text = " ▼ " .. text
+                    else
+                        SecBtn.Text = " ► " .. text
+                    end
+                    local base = SecBtn.AbsoluteSize.Y
+                    SecContent.Position = UDim2.new(0, 10, 0, base)
+                    local targetSize = UDim2.new(1, -8, 0, open and (base + SecLayout.AbsoluteContentSize.Y + 4) or base)
+                    if animate then 
+                        Tween(SecFrame, {Size = targetSize}, 0.25) 
+                    else 
+                        SecFrame.Size = targetSize 
+                    end
+                end
+
+                SecBtn:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() 
+                    updateSec(false) 
                 end)
                 
-                local SecObj = {
-                    Frame = SecFrame,
-                    ParentSection = parentSection,
-                    ForceOpen = function()
-                        if not open then
-                            open = true
-                            updateSec(true)
-                        end
-                    end
-                }
+                SecLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() 
+                    if open then 
+                        updateSec(false) 
+                    end 
+                end)
+                
+                SecBtn.MouseButton1Click:Connect(function() 
+                    open = not open
+                    updateSec(true) 
+                end)
 
-                RegisterElement(SecFrame, text); return AppendElements(SecContent, SecObj)
+                RegisterTheme(function(theme) 
+                    SecFrame.BackgroundColor3 = theme.WindowBg
+                    SecFrame.BorderColor3 = theme.Border
+                    SecFrame.BackgroundTransparency = theme.ElementTransparency
+                    SecBtn.TextColor3 = theme.Text 
+                end)
+                
+                local SecObj = { 
+                    Frame = SecFrame, 
+                    ParentSection = parentSection, 
+                    ForceOpen = function() 
+                        if not open then 
+                            open = true
+                            updateSec(true) 
+                        end 
+                    end 
+                }
+                
+                RegisterElement(SecFrame, text)
+                return AppendElements(SecContent, SecObj)
             end
 
             return Elements
@@ -929,4 +1569,5 @@ function IrisLib.CreateWindow(titleText, defaultSize)
     end
     return WindowObj
 end
+
 return IrisLib
