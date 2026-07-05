@@ -1,6 +1,6 @@
 -- =====================================================================
--- ALTIS LIB V3.9.1 - FULL SOURCE CODE
--- FIXES: TextWrapped dynamic resizing, ImageTransparency isolation
+-- ALTIS LIB V3.2 - FULL SOURCE CODE
+-- FEATURES: Destroy handlers, Window Toggle, open/close animations
 -- =====================================================================
 
 local UserInputService = game:GetService("UserInputService")
@@ -294,6 +294,31 @@ function AltisLib.CreateWindow(titleText, defaultSize)
         return math.ceil(bounds.Y)
     end
 
+    local function RemoveElementCache(frame)
+        for i = #WindowObj.ElementsCache, 1, -1 do
+            local el = WindowObj.ElementsCache[i]
+            if el and el.Frame and frame and (el.Frame == frame or el.Frame:IsDescendantOf(frame)) then
+                table.remove(WindowObj.ElementsCache, i)
+            end
+        end
+    end
+
+    local function MakeDestroyableHandler(frame)
+        local destroyed = false
+        local handler = {}
+        function handler:Destroy()
+            if destroyed then return end
+            destroyed = true
+            if frame then
+                RemoveElementCache(frame)
+                if frame.Parent then
+                    frame:Destroy()
+                end
+            end
+        end
+        return handler
+    end
+
     function WindowObj:Destroy()
         self.GuiInstance:Destroy()
     end
@@ -330,8 +355,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
         end
     end
 
+    function WindowObj:Toggle(animate)
+        self:SetVisible(not self.GuiInstance.Enabled, animate)
+    end
+
     function WindowObj:ToggleVisible(animate)
-        self:SetVisible(not self.MainFrame.Visible, animate)
+        self:Toggle(animate)
     end
 
     -- Logic Thanh Search
@@ -621,6 +650,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     UpdateElementCacheText(Label, newText or "")
                     updateHeight()
                 end
+                function handler:Destroy()
+                    RemoveElementCache(Label)
+                    if Label.Parent then
+                        Label:Destroy()
+                    end
+                end
                 return handler
             end
 
@@ -729,6 +764,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     updateContent()
                     UpdateVisibility()
                 end
+                function handler:Destroy()
+                    RemoveElementCache(ParaFrame)
+                    if ParaFrame.Parent then
+                        ParaFrame:Destroy()
+                    end
+                end
                 return handler
             end
             function Elements:CreateImage(imageId, size)
@@ -773,6 +814,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     ImgLabel.Size = newSize
                     ImgLabel.ScaleType = Enum.ScaleType.Stretch 
                 end
+                function handler:Destroy()
+                    RemoveElementCache(ImgLabel)
+                    if ImgLabel.Parent then
+                        ImgLabel:Destroy()
+                    end
+                end
                 return handler
             end
 
@@ -797,6 +844,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     Btn.BackgroundTransparency = theme.ElementTransparency 
                 end)
                 RegisterElement(Btn, text)
+                return MakeDestroyableHandler(Btn)
             end
 
             function Elements:CreateToggle(text, default, callback)
@@ -863,6 +911,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 CheckBox.MouseButton1Click:Connect(trigger)
                 Label.MouseButton1Click:Connect(trigger)
                 RegisterElement(Frame, text)
+                return MakeDestroyableHandler(Frame)
             end
 
             function Elements:CreateSlider(text, min, max, default, callback)
@@ -948,6 +997,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     if IsValidInputBegan(input) then sliding = false end 
                 end)
                 RegisterElement(Frame, text)
+                return MakeDestroyableHandler(Frame)
             end
 
             function Elements:CreateTextBox(text, placeholder, callback)
@@ -1009,6 +1059,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 local handler = {}
                 function handler:SetText(newText) 
                     TBox.Text = newText 
+                end
+                function handler:Destroy()
+                    RemoveElementCache(Frame)
+                    if Frame.Parent then
+                        Frame:Destroy()
+                    end
                 end
                 return handler
             end
@@ -1134,6 +1190,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 function handler:Refresh(newOpts) 
                     options = newOpts
                     refreshOptions() 
+                end
+                function handler:Destroy()
+                    RemoveElementCache(Frame)
+                    if Frame.Parent then
+                        Frame:Destroy()
+                    end
                 end
                 return handler
             end
@@ -1293,6 +1355,12 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     updateToggleText()
                     fireCb() 
                 end
+                function handler:Destroy()
+                    RemoveElementCache(Frame)
+                    if Frame.Parent then
+                        Frame:Destroy()
+                    end
+                end
                 return handler
             end
             function Elements:CreateKeybind(text, defaultKey, callback)
@@ -1366,6 +1434,8 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     end
                 end)
                 RegisterElement(Frame, text)
+                local handler = MakeDestroyableHandler(Frame)
+                return handler
             end
 
             function Elements:CreateColorPicker(text, defaultColor, callback)
@@ -1550,6 +1620,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     toggle()
                 end)
                 RegisterElement(Frame, text)
+                return MakeDestroyableHandler(Frame)
             end
 
             function Elements:CreateSection(text)
@@ -1626,7 +1697,14 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 }
                 RegisterElement(SecFrame, text)
                 
-                return AppendElements(SecContent, SecObj)
+                local sectionElements = AppendElements(SecContent, SecObj)
+                function sectionElements:Destroy()
+                    RemoveElementCache(SecFrame)
+                    if SecFrame.Parent then
+                        SecFrame:Destroy()
+                    end
+                end
+                return sectionElements
             end
 
             return Elements
@@ -1635,4 +1713,5 @@ function AltisLib.CreateWindow(titleText, defaultSize)
     end
     return WindowObj
 end
+-- Trả về Module
 return AltisLib
