@@ -3,6 +3,7 @@
 -- [[ FIX LOGIC: Dropdown standard dynamic colors ]]
 -- [[ V3.6/3.7: ResizeHandle synced with MainColor ]]
 -- [[ NEW ELEMENT: Paragraph (Title, Divider, Text - Auto resize & Hide when empty) ]]
+-- [[ NEW ELEMENT: Image (White border, custom size, auto-parse ID) ]]
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -361,7 +362,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 return LabelHandler
             end
 
-            -- NEW PARAGRAPH ELEMENT
             function Elements:CreateParagraph(titleText, contentText)
                 titleText = titleText or "Paragraph"
                 contentText = contentText or ""
@@ -387,7 +387,7 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                 Title.BackgroundTransparency = 1
                 Title.Text = titleText
                 Title.Font = Enum.Font.Code
-                Title.TextSize = 15 -- Chữ to hơn element thường
+                Title.TextSize = 15
                 Title.TextXAlignment = Enum.TextXAlignment.Left
 
                 local Div = Instance.new("Frame", ParaFrame)
@@ -422,7 +422,6 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     Content.TextColor3 = theme.Text
                 end)
 
-                -- Lưu text chung để SearchBar có thể tìm ra được Paragraph này
                 RegisterElement(ParaFrame, titleText .. " " .. contentText)
 
                 local handler = {}
@@ -430,11 +429,50 @@ function IrisLib.CreateWindow(titleText, defaultSize)
                     titleText = newTitle or ""
                     Title.Text = titleText
                 end
-                
                 function handler:SetText(newText)
                     contentText = newText or ""
                     Content.Text = contentText
                     UpdateVisibility()
+                end
+                return handler
+            end
+
+            -- NEW IMAGE ELEMENT
+            function Elements:CreateImage(imageId, size)
+                size = size or UDim2.new(1, -8, 0, 150)
+                local ImgLabel = Instance.new("ImageLabel", container)
+                ImgLabel.Size = size
+                ImgLabel.BorderSizePixel = 1
+                ImgLabel.BorderColor3 = Color3.fromRGB(255, 255, 255) -- Viền màu trắng cứng theo yêu cầu
+                
+                -- Hàm xử lý ID để tự nhận diện nếu người dùng chỉ nhập số hoặc nhập link
+                local function parseImageId(id)
+                    if type(id) == "number" then return "rbxassetid://" .. id end
+                    if type(id) == "string" then
+                        if id:find("rbxassetid://") or id:find("http") or id:find("rbxasset://") then return id end
+                        local num = id:match("%d+")
+                        if num then return "rbxassetid://" .. num end
+                    end
+                    return ""
+                end
+                
+                ImgLabel.Image = parseImageId(imageId)
+                ImgLabel.ScaleType = Enum.ScaleType.Fit
+                
+                RegisterTheme(function(theme)
+                    ImgLabel.BackgroundColor3 = theme.ElementBg
+                    ImgLabel.BackgroundTransparency = theme.ElementTransparency
+                    ImgLabel.ImageTransparency = theme.ElementTransparency
+                end)
+                
+                RegisterElement(ImgLabel, "image") -- Nhập chữ image vào ô Search để tìm thấy element này
+                
+                local handler = {}
+                function handler:SetImage(newId)
+                    ImgLabel.Image = parseImageId(newId)
+                end
+                function handler:SetSize(newSize)
+                    ImgLabel.Size = newSize
                 end
                 return handler
             end
