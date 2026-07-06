@@ -1,6 +1,6 @@
 -- =====================================================================
--- ALTIS LIB V3.3.2 - FULL SOURCE CODE
--- FEATURES: Destroy handlers, Window Toggle, open/close animations
+-- ALTIS LIB V3.5 - FULL SOURCE CODE
+-- FEATURES: SupportDestroyAll, Image URL support, Window Toggle, open/close animations
 -- =====================================================================
 
 local UserInputService = game:GetService("UserInputService")
@@ -514,7 +514,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
     function WindowObj:SetBackgroundTransparency(value)
         self.Theme.ElementTransparency = math.clamp(value, 0, 1)
         for _, cb in ipairs(self.ThemeCallbacks) do 
-            cb(self.Theme) 
+            pcall(cb, self.Theme) 
         end
     end
     
@@ -530,13 +530,13 @@ function AltisLib.CreateWindow(titleText, defaultSize)
             ElementTransparency = self.Theme.ElementTransparency
         }
         for _, cb in ipairs(self.ThemeCallbacks) do 
-            cb(self.Theme) 
+            pcall(cb, self.Theme) 
         end
     end
 
     local function RegisterTheme(callback)
         table.insert(WindowObj.ThemeCallbacks, callback)
-        if WindowObj.Theme.Accent then callback(WindowObj.Theme) end
+        if WindowObj.Theme.Accent then pcall(callback, WindowObj.Theme) end
     end
 
     -- Áp dụng theme cơ bản
@@ -638,7 +638,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
         TabButton.Font = Enum.Font.Code
         TabButton.TextSize = 13
         TabButton.Parent = TabScroll
-        
+
         local TextBounds = TextService:GetTextSize(tabName, 13, Enum.Font.Code, Vector2.new(math.huge, 30))
         TabButton.Size = UDim2.new(0, TextBounds.X + 20, 1, -4)
 
@@ -661,11 +661,36 @@ function AltisLib.CreateWindow(titleText, defaultSize)
         TabPage.Visible = false
         TabPage.Parent = ContentArea
         TabPadding.Parent = TabPage
-        
+
         local PageLayout = Instance.new("UIListLayout")
         PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
         PageLayout.Padding = UDim.new(0, 4)
         PageLayout.Parent = TabPage
+
+        local tabRecord = { Button = TabButton, Page = TabPage, Name = tabName }
+        local function ActivateTab(record, clearSearch)
+            for _, t in ipairs(WindowObj.Tabs) do
+                if t.Page then
+                    t.Page.Visible = false
+                end
+            end
+
+            if record then
+                WindowObj.CurrentTab = record.Name
+                if record.Page then
+                    record.Page.Visible = true
+                end
+                if WindowObj.Theme and WindowObj.Theme.Accent then
+                    WindowObj:SetMainColor(WindowObj.Theme.Accent)
+                end
+            else
+                WindowObj.CurrentTab = nil
+            end
+
+            if clearSearch then
+                SearchBox.Text = ""
+            end
+        end
 
         RegisterTheme(function(theme)
             TabButton.BorderColor3 = theme.Border
@@ -675,20 +700,14 @@ function AltisLib.CreateWindow(titleText, defaultSize)
         end)
 
         TabButton.MouseButton1Click:Connect(function()
-            WindowObj.CurrentTab = tabName
-            for _, t in pairs(WindowObj.Tabs) do 
-                t.Page.Visible = false 
-            end
-            TabPage.Visible = true
-            WindowObj:SetMainColor(WindowObj.Theme.Accent) 
-            SearchBox.Text = "" 
+            ActivateTab(tabRecord, true)
         end)
-        
+
         if #WindowObj.Tabs == 0 then 
             WindowObj.CurrentTab = tabName
             TabPage.Visible = true 
         end
-        table.insert(WindowObj.Tabs, {Button = TabButton, Page = TabPage})
+        table.insert(WindowObj.Tabs, tabRecord)
 
         -- Đóng gói Element Creation Logic
         local function AppendElements(container, parentSection)
@@ -714,12 +733,13 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 Div.BorderSizePixel = 0
                 Div.LayoutOrder = NextLayoutOrder()
                 Div.Parent = container
-                
+
                 RegisterTheme(function(theme) 
                     Div.BackgroundColor3 = theme.Border
                     Div.BackgroundTransparency = theme.ElementTransparency 
                 end)
                 RegisterElement(Div, "")
+                return MakeDestroyableHandler(Div)
             end
 
             function Elements:CreateLabel(text)
@@ -1842,7 +1862,47 @@ function Elements:CreateImage(imageId, size)
 
             return Elements
         end
-        return AppendElements(TabPage, nil)
+        local tabApi = AppendElements(TabPage, nil)
+        local destroyed = false
+
+        function tabApi:Destroy()
+            if destroyed then
+                return
+            end
+            destroyed = true
+
+            local wasCurrent = WindowObj.CurrentTab == tabName
+
+            for i = #WindowObj.Tabs, 1, -1 do
+                local t = WindowObj.Tabs[i]
+                if t == tabRecord or t.Name == tabName or t.Page == TabPage or t.Button == TabButton then
+                    table.remove(WindowObj.Tabs, i)
+                    break
+                end
+            end
+
+            RemoveElementCache(TabPage)
+            RemoveElementCache(TabButton)
+
+            if TabPage.Parent then
+                TabPage:Destroy()
+            end
+            if TabButton.Parent then
+                TabButton:Destroy()
+            end
+
+            if wasCurrent then
+                local fallback = WindowObj.Tabs[1]
+                if fallback then
+                    ActivateTab(fallback, true)
+                else
+                    WindowObj.CurrentTab = nil
+                    SearchBox.Text = ""
+                end
+            end
+        end
+
+        return tabApi
     end
     return WindowObj
 end
