@@ -44,8 +44,8 @@ local ColorPicker = Tab:CreateColorPicker("ColorPicker", Color3.fromRGB(0, 0, 0)
 end)
 
 local Image = Tab:CreateImage("rbxassetid://95605701610484", UDim2.new(0, 50, 0, 50))
-local Label = Tab:CreateLabel("Label")
-local Paragraph = Tab:CreateParagraph("Paragraph Title", "Paragraph Text")
+local Label = Tab:CreateLabel("Longgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg Label")
+local Paragraph = Tab:CreateParagraph("Longggggggggggggggggggggggggggggggggggggggggggggggggg Paragraph Title", "Longggggggggggggggggggggggggggggggggggggggggggggggggg Paragraph Text")
 local Divider = Tab:CreateDivider()
 
 local SectionButton = Section:CreateButton("Section Button", function()
