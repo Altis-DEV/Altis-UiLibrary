@@ -1,86 +1,392 @@
 -- =====================================================================
--- BẢN FULL EXAMPLE - HƯỚNG DẪN SỬ DỤNG MỌI TÍNH NĂNG CỦA ALTIS LIB
+-- ALTIS LIBRARY V3.9 - FULL SCRIPT EXAMPLE (FIXED BUGS VERSION)
+-- Đã fix: Xuống dòng \n, Wrap Text, Image Auto/Fixed Scale
 -- =====================================================================
 
--- 1. Tạo Cửa Sổ (Window)
-local Window = AltisLib.CreateWindow("Altis V3.9.1 - Ultimate Fix", UDim2.new(0, 550, 0, 400))
+-- 1. Gọi UI Library từ Source Github
+local AltisLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Altis-DEV/Altis-UiLibrary/refs/heads/main/Source"))()
 
--- Thiết lập màu sắc và Background trong suốt
-Window:SetMainColor(Color3.fromRGB(170, 85, 255)) -- Purple theme
-Window:SetBackgroundTransparency(0.15) -- Ui mờ 15% (KHÔNG làm mờ Image)
-Window:SetBackgroundImage("rbxassetid://13580456102") -- Ảnh nền tuỳ ý
-Window:SetBackgroundImageTransparency(0.8)
+-- 2. Tạo Cửa sổ UI (Window)
+local Window = AltisLib.CreateWindow("AltisLib V3.9 Example", UDim2.new(0, 550, 0, 400))
 
--- Gửi Notification Chào mừng
-Window:SendNotification("Thành công!", "AltisLib V3.9.1 đã được nạp hoàn chỉnh với TextWrapped Dynamic Resizing.", 5)
+Window:SetMainColor(Color3.fromRGB(0, 150, 255)) 
+Window:SetBackgroundTransparency(0.6)
+Window:SetBackgroundImage("rbxassetid://111612290258829") 
+Window:SetBackgroundImageTransparency(0.4) 
 
--- 2. Tạo Tab 1: General
-local GeneralTab = Window:CreateTab("General Functions")
+local Tab1 = Window:CreateTab("element test tab")
 
-GeneralTab:CreateLabel("Đây là Label có Text siêu dài. Bạn hãy thử kéo góc Resize bên dưới lên để thu hẹp chiều ngang cửa sổ lại. Chữ sẽ bị ép xuống dòng và tự động giãn chiều cao của Label ra để không bị mất góc nào cả!")
+local label1 = Tab1:CreateLabel("Đây là Label có Text siêu dài. Bạn hãy thử kéo góc Resize bên dưới lên để thu hẹp chiều ngang cửa sổ lại. Chữ sẽ bị ép xuống dòng và tự động giãn chiều cao của Label ra để không bị mất góc nào cả!")
 
-GeneralTab:CreateParagraph("Thông tin phiên bản:", "- Khôi phục toàn bộ 900+ lines code gốc.\n- Fix Image Transparency riêng biệt.\n- Fix Auto-Size cho tất cả Frame khi text gập dòng.")
+Tab1:CreateDivider()
 
-GeneralTab:CreateDivider()
+local paragraph1 = Tab1:CreateParagraph("Thông tin phiên bản:", "- Khôi phục toàn bộ 900+ lines code gốc.\n- Fix Image Transparency riêng biệt.\n- Fix Auto-Size cho tất cả Frame khi text gập dòng. \nđã cập nhật tính năng cho paragraph, bạn có thể tạo bất kì element nào trong paragraph")
 
-GeneralTab:CreateButton("In ra Console", function()
+Tab1:CreateDivider()
+
+Tab1:CreateButton("Set Title, Text các element trên", function()
     print("Button Clicked!")
-    Window:SendNotification("Action", "Bạn vừa nhấn nút in ra Console", 3)
+    Window:SendNotification("Action", "bạn vừa thay đổi title, text label và paragraph", 3)
+label1:SetText("đã cập nhật text mới")
+paragraph1:SetText("đã cập nhật text mới")
+paragraph1:SetTitle("đã cập nhật text mới")
 end)
 
-GeneralTab:CreateToggle("Bật chế độ God Mode (Cái này cũng test Text Wrap siêu dài nếu bạn thích thử bóp hẹp cửa sổ vào nhé)", false, function(state)
+Tab1:CreateDivider()
+
+Tab1:CreateToggle("Bật chế độ God Mode (Cái này cũng test Text Wrap siêu dài nếu bạn thích thử bóp hẹp cửa sổ vào nhé)", false, function(state)
     print("God Mode:", state)
+Window:SendNotification("Action", "bật tắt toggle", 3)
 end)
 
-GeneralTab:CreateSlider("Chỉnh Tốc Độ Chạy (WalkSpeed) - Nếu kéo hẹp lại text cũng sẽ đẩy thanh slider xuống dưới", 16, 100, 16, function(value)
+Tab1:CreateDivider()
+
+Tab1:CreateSlider("Chỉnh Tốc Độ Chạy (WalkSpeed) - Nếu kéo hẹp lại text cũng sẽ đẩy thanh slider xuống dưới", 16, 100, 16, function(value)
     if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
     end
 end)
 
--- 3. Tạo Tab 2: Advanced
-local AdvancedTab = Window:CreateTab("Advanced UI")
+Tab1:CreateDivider()
 
-AdvancedTab:CreateImage("rbxassetid://10636284617") -- Test Ảnh (sẽ thấy ảnh rõ 100% trong khi UI vẫn mờ)
-
-local MyDropdown = AdvancedTab:CreateDropdown("Lựa chọn Vũ Khí", {"Kiếm", "Súng", "Cung"}, "Kiếm", function(option)
+local MyDropdown = Tab1:CreateDropdown("Lựa chọn Vũ Khí", {"Kiếm", "Súng", "Cung"}, "Kiếm", function(option)
     print("Đã chọn:", option)
 end)
 
-AdvancedTab:CreateButton("Cập nhật lại Dropdown", function()
+Tab1:CreateDivider()
+
+Tab1:CreateButton("Cập nhật lại Dropdown", function()
     MyDropdown:Refresh({"Đao", "Pháo", "Giáo", "Khiên"})
     Window:SendNotification("Updated", "Đã refresh lại Dropdown", 3)
 end)
 
-AdvancedTab:CreateMultiDropdown("Chọn Skill kết hợp", {"Chém", "Phóng", "Chữa Lành", "Lướt"}, {"Chém", "Lướt"}, function(options)
+Tab1:CreateDivider()
+
+local MyMultiDropdown = Tab1:CreateMultiDropdown("Chọn Skill kết hợp", {"Chém", "Phóng", "Chữa Lành", "Lướt"}, {"Chém", "Lướt"}, function(options)
     print("Các skill đang chọn:")
     for _, skill in ipairs(options) do print("-", skill) end
 end)
 
-AdvancedTab:CreateTextBox("Nhập tên người chơi muốn dịch chuyển tới", "Ví dụ: Player123", function(text, enterPressed)
+Tab1:CreateDivider()
+
+Tab1:CreateButton("Cập nhật lại multi Dropdown", function()
+    MyMultiDropdown:Refresh({"Đao", "Pháo", "Giáo", "Khiên"})
+    Window:SendNotification("Updated", "Đã refresh lại Dropdown", 3)
+end)
+
+Tab1:CreateDivider()
+
+Tab1:CreateTextBox("Nhập tên người chơi muốn dịch chuyển tới", "Ví dụ: Player123", function(text, enterPressed)
     if enterPressed then
         print("Đang tìm người chơi:", text)
     end
 end)
 
-AdvancedTab:CreateKeybind("Phím ẩn/hiện Menu (Test Bind)", Enum.KeyCode.RightShift, function(key, pressed)
+Tab1:CreateDivider()
+
+Tab1:CreateKeybind("Phím ẩn/hiện Menu (Test Bind)", Enum.KeyCode.RightShift, function(key, pressed)
     if pressed then
         print("Đã bấm phím:", key.Name)
     end
 end)
 
-AdvancedTab:CreateColorPicker("Đổi màu UI Theme", Color3.fromRGB(170, 85, 255), function(color)
+Tab1:CreateDivider()
+
+Tab1:CreateColorPicker("Đổi màu UI Theme", Color3.fromRGB(170, 85, 255), function(color)
     Window:SetMainColor(color)
 end)
 
--- 4. Tạo Tab 3: Nested Sections
-local SectionTab = Window:CreateTab("Section & Sub-sections")
+Tab1:CreateDivider()
 
-local MainSection = SectionTab:CreateSection("Khu vực cài đặt Chính")
-MainSection:CreateToggle("Tự động cày cuốc", true, function(state) end)
+local logoimage = Tab1:CreateImage("rbxassetid://95605701610484", UDim2.new(0, 50, 0, 50))
 
-local SubSection = MainSection:CreateSection("Cài đặt phụ của Cày Cuốc")
-SubSection:CreateSlider("Khoảng cách quái", 10, 100, 50, function(value) end)
-SubSection:CreateButton("Reset Config", function() end)
+Tab1:CreateDivider()
 
-SectionTab:CreateSection("Khu vực Trống (Test Layout)")
+local backgroundimage = Tab1:CreateImage("rbxassetid://137021248562867", UDim2.new(0, 150, 0, 50))
+
+Tab1:CreateDivider()
+
+Tab1:CreateButton("cập nhật size ảnh trên to hơn", function()
+logoimage:SetSize(UDim2.new(0, 100, 0, 100))
+end)
+
+Tab1:CreateDivider()
+
+Tab1:CreateButton("cập nhật size và ảnh dưới", function()
+backgroundimage:SetSize(UDim2.new(0, 250, 0, 150))
+backgroundimage:SetImage("rbxassetid://121183386818512")
+end)
+
+Tab1:CreateDivider()
+
+Tab1:CreateButton("cập nhật ảnh nền", function()
+Window:SetBackgroundImage("rbxassetid://121183386818512")
+end)
+
+Tab1:CreateDivider()
+
+Tab1:CreateSlider("độ trong suốt nền", 0, 100, 0, function(value)
+ Window:SetBackgroundTransparency(value/100)
+end)
+
+Tab1:CreateDivider()
+
+Tab1:CreateSlider("độ trong suốt ảnh nền", 0, 100, 0, function(value)
+ Window:SetBackgroundImageTransparency(value/100)
+end)
+
+Tab1:CreateDivider()
+
+Tab1:CreateButton("xóa 2 ảnh trên", function()
+logoimage:Destroy()
+backgroundimage:Destroy()
+end)
+
+Tab1:CreateDivider()
+
+local STab1 = Tab1:CreateSection("Element In Section")
+
+local label1 = STab1:CreateLabel("Đây là Label có Text siêu dài. Bạn hãy thử kéo góc Resize bên dưới lên để thu hẹp chiều ngang cửa sổ lại. Chữ sẽ bị ép xuống dòng và tự động giãn chiều cao của Label ra để không bị mất góc nào cả!")
+
+STab1:CreateDivider()
+
+local paragraph1 = STab1:CreateParagraph("Thông tin phiên bản:", "- Khôi phục toàn bộ 900+ lines code gốc.\n- Fix Image Transparency riêng biệt.\n- Fix Auto-Size cho tất cả Frame khi text gập dòng.")
+
+STab1:CreateDivider()
+
+STab1:CreateButton("Set Title, Text các element trên", function()
+    print("Button Clicked!")
+    Window:SendNotification("Action", "bạn vừa thay đổi title, text label và paragraph", 3)
+label1:SetText("đã cập nhật text mới")
+paragraph1:SetText("đã cập nhật text mới")
+paragraph1:SetTitle("đã cập nhật text mới")
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateToggle("Bật chế độ God Mode (Cái này cũng test Text Wrap siêu dài nếu bạn thích thử bóp hẹp cửa sổ vào nhé)", false, function(state)
+    print("God Mode:", state)
+Window:SendNotification("Action", "bật tắt toggle", 3)
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateSlider("Chỉnh Tốc Độ Chạy (WalkSpeed) - Nếu kéo hẹp lại text cũng sẽ đẩy thanh slider xuống dưới", 16, 100, 16, function(value)
+    if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
+    end
+end)
+
+STab1:CreateDivider()
+
+local MyDropdown = STab1:CreateDropdown("Lựa chọn Vũ Khí", {"Kiếm", "Súng", "Cung"}, "Kiếm", function(option)
+    print("Đã chọn:", option)
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateButton("Cập nhật lại Dropdown", function()
+    MyDropdown:Refresh({"Đao", "Pháo", "Giáo", "Khiên"})
+    Window:SendNotification("Updated", "Đã refresh lại Dropdown", 3)
+end)
+
+STab1:CreateDivider()
+
+local MyMultiDropdown = STab1:CreateMultiDropdown("Chọn Skill kết hợp", {"Chém", "Phóng", "Chữa Lành", "Lướt"}, {"Chém", "Lướt"}, function(options)
+    print("Các skill đang chọn:")
+    for _, skill in ipairs(options) do print("-", skill) end
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateButton("Cập nhật lại multi Dropdown", function()
+    MyMultiDropdown:Refresh({"Đao", "Pháo", "Giáo", "Khiên"})
+    Window:SendNotification("Updated", "Đã refresh lại Dropdown", 3)
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateTextBox("Nhập tên người chơi muốn dịch chuyển tới", "Ví dụ: Player123", function(text, enterPressed)
+    if enterPressed then
+        print("Đang tìm người chơi:", text)
+    end
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateKeybind("Phím ẩn/hiện Menu (Test Bind)", Enum.KeyCode.RightShift, function(key, pressed)
+    if pressed then
+        print("Đã bấm phím:", key.Name)
+    end
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateColorPicker("Đổi màu UI Theme", Color3.fromRGB(170, 85, 255), function(color)
+    Window:SetMainColor(color)
+end)
+
+STab1:CreateDivider()
+
+local logoimage = STab1:CreateImage("rbxassetid://95605701610484", UDim2.new(0, 50, 0, 50))
+
+STab1:CreateDivider()
+
+local backgroundimage = STab1:CreateImage("rbxassetid://137021248562867", UDim2.new(0, 150, 0, 50))
+
+STab1:CreateDivider()
+
+STab1:CreateButton("cập nhật size ảnh trên to hơn", function()
+logoimage:SetSize(UDim2.new(0, 100, 0, 100))
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateButton("cập nhật size và ảnh dưới", function()
+backgroundimage:SetSize(UDim2.new(0, 250, 0, 150))
+backgroundimage:SetImage("rbxassetid://121183386818512")
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateButton("cập nhật ảnh nền", function()
+Window:SetBackgroundImage("rbxassetid://121183386818512")
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateSlider("độ trong suốt nền", 0, 100, 0, function(value)
+ Window:SetBackgroundTransparency(value/100)
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateSlider("độ trong suốt ảnh nền", 0, 100, 0, function(value)
+ Window:SetBackgroundImageTransparency(value/100)
+end)
+
+STab1:CreateDivider()
+
+STab1:CreateButton("xóa 2 ảnh trên", function()
+logoimage:Destroy()
+backgroundimage:Destroy()
+end)
+
+STab1:CreateDivider()
+
+local SSTab1 = STab1:CreateSection("Element In Section In Element Section")
+
+STab1:CreateDivider()
+
+Window:SendNotification("AltisLib V4.1", "Khởi tạo thành công toàn bộ giao diện và chức năng!", 5)
+
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+-- Safer toggle wrapper for different WindUI builds
+local function ToggleWindow()
+    local ok = pcall(function()
+        if Window and Window.Toggle then
+            Window:Toggle()
+        elseif Window and Window.SetVisible then
+            -- fallback for some builds
+            Window:SetVisible(true)
+        elseif Window and Window.Open then
+            Window:Open()
+        end
+    end)
+
+    return ok
+end
+
+local function CreateFloatingToggle()
+    if getgenv().AltisToggleGui then
+        pcall(function()
+            getgenv().AltisToggleGui:Destroy()
+        end)
+    end
+
+    local toggleGui = Instance.new("ScreenGui")
+    toggleGui.Name = "AltisToggleGui"
+    toggleGui.ResetOnSpawn = false
+    toggleGui.IgnoreGuiInset = true
+    toggleGui.DisplayOrder = 999999
+    toggleGui.Parent = CoreGui
+
+    getgenv().AltisToggleGui = toggleGui
+
+    local toggle = Instance.new("ImageButton")
+    toggle.Name = "AltisToggleButton"
+    toggle.Parent = toggleGui
+    toggle.Size = UDim2.fromOffset(48, 48)
+    toggle.Position = UDim2.new(0, 16, 0.5, -24)
+    toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    toggle.BorderSizePixel = 0
+    toggle.AutoButtonColor = false
+    toggle.Image = "rbxassetid://95605701610484"
+    toggle.Active = true
+    toggle.Selectable = true
+    toggle.ZIndex = 999999
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = toggle
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Transparency = 0.72
+    stroke.Thickness = 1.2
+    stroke.Parent = toggle
+
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        toggle.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+
+    toggle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = toggle.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    toggle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            updateDrag(input)
+        end
+    end)
+
+    toggle.MouseButton1Click:Connect(function()
+        Window:Toggle()
+    end)
+end
+
+CreateFloatingToggle()
