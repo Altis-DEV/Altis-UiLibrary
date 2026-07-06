@@ -156,6 +156,9 @@ Tab:CreateButton("Destroy Window", function()
     Window:Destroy()
 end)
 
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
 local function CreateFloatingToggle()
     if getgenv().AltisToggleGui then
         pcall(function()
