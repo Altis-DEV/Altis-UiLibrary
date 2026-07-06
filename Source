@@ -1,5 +1,5 @@
 -- =====================================================================
--- ALTIS LIB V3.3 - FULL SOURCE CODE
+-- ALTIS LIB V3.3.2 - FULL SOURCE CODE
 -- FEATURES: Destroy handlers, Window Toggle, open/close animations
 -- =====================================================================
 
@@ -280,6 +280,8 @@ function AltisLib.CreateWindow(titleText, defaultSize)
         MinimizeButton = MinimizeBtn
     }
 
+    local destroyed = false
+
     local function UpdateElementCacheText(frame, newText)
         local lowered = (newText or ""):lower()
         for _, el in ipairs(WindowObj.ElementsCache) do
@@ -321,7 +323,26 @@ function AltisLib.CreateWindow(titleText, defaultSize)
     end
 
     function WindowObj:Destroy()
-        self.GuiInstance:Destroy()
+        if destroyed then
+            return
+        end
+        destroyed = true
+
+        self.CurrentTab = nil
+        table.clear(self.Tabs)
+        table.clear(self.ThemeCallbacks)
+        table.clear(self.ElementsCache)
+
+        local gui = self.GuiInstance
+        self.GuiInstance = nil
+        self.MainFrame = nil
+        self.MainScale = nil
+        self.CloseButton = nil
+        self.MinimizeButton = nil
+
+        if gui and gui.Parent then
+            gui:Destroy()
+        end
     end
 
     function WindowObj:SetVisible(visible, animate)
@@ -1752,5 +1773,5 @@ function Elements:CreateImage(imageId, size)
     end
     return WindowObj
 end
-
+-- Trả về Module
 return AltisLib
