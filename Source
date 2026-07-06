@@ -1,5 +1,5 @@
 -- =====================================================================
--- ALTIS LIB V3.2 - FULL SOURCE CODE
+-- ALTIS LIB V3.3 - FULL SOURCE CODE
 -- FEATURES: Destroy handlers, Window Toggle, open/close animations
 -- =====================================================================
 
@@ -659,15 +659,16 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 return handler
             end
 
-            function Elements:CreateParagraph(titleText, contentText)
+            
+function Elements:CreateParagraph(titleText, contentText)
                 local ParaFrame = Instance.new("Frame")
-                ParaFrame.Size = UDim2.new(1, -8, 0, 0) 
+                ParaFrame.Size = UDim2.new(1, -8, 0, 0)
                 ParaFrame.BorderSizePixel = 1
-                ParaFrame.AutomaticSize = Enum.AutomaticSize.Y 
+                ParaFrame.AutomaticSize = Enum.AutomaticSize.Y
                 ParaFrame.ClipsDescendants = true
                 ParaFrame.LayoutOrder = NextLayoutOrder()
                 ParaFrame.Parent = container
-                
+
                 local UIPadding = Instance.new("UIPadding")
                 UIPadding.PaddingTop = UDim.new(0, 4)
                 UIPadding.PaddingBottom = UDim.new(0, 4)
@@ -690,11 +691,13 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 Title.TextYAlignment = Enum.TextYAlignment.Top
                 Title.TextWrapped = true
                 Title.AutomaticSize = Enum.AutomaticSize.None
+                Title.LayoutOrder = 1
                 Title.Parent = ParaFrame
 
                 local Div = Instance.new("Frame")
                 Div.Size = UDim2.new(1, 0, 0, 1)
                 Div.BorderSizePixel = 0
+                Div.LayoutOrder = 2
                 Div.Parent = ParaFrame
 
                 local Content = Instance.new("TextLabel")
@@ -707,7 +710,30 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                 Content.TextYAlignment = Enum.TextYAlignment.Top
                 Content.TextWrapped = true
                 Content.AutomaticSize = Enum.AutomaticSize.None
+                Content.LayoutOrder = 3
                 Content.Parent = ParaFrame
+
+                local ParagraphContent = Instance.new("Frame")
+                ParagraphContent.Name = "ParagraphContent"
+                ParagraphContent.Size = UDim2.new(1, 0, 0, 0)
+                ParagraphContent.BackgroundTransparency = 1
+                ParagraphContent.BorderSizePixel = 0
+                ParagraphContent.AutomaticSize = Enum.AutomaticSize.Y
+                ParagraphContent.LayoutOrder = 4
+                ParagraphContent.Parent = ParaFrame
+
+                local ParagraphLayout = Instance.new("UIListLayout")
+                ParagraphLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                ParagraphLayout.Padding = UDim.new(0, 4)
+                ParagraphLayout.Parent = ParagraphContent
+
+                local ParagraphSection = {
+                    Frame = ParaFrame,
+                    ParentSection = parentSection,
+                    ForceOpen = function() end
+                }
+
+                local ParagraphElements = AppendElements(ParagraphContent, ParagraphSection)
 
                 local function updateTitle()
                     local width = math.max(1, ParaFrame.AbsoluteSize.X - 10)
@@ -732,10 +758,19 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     updateContent()
                     UpdateVisibility()
                 end)
-                ParaFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+
+                local function refreshParagraphSize()
                     updateTitle()
                     updateContent()
+                end
+
+                ParaFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshParagraphSize)
+                ParagraphLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    if ParaFrame.Parent then
+                        refreshParagraphSize()
+                    end
                 end)
+
                 task.defer(updateTitle)
                 task.defer(updateContent)
                 UpdateVisibility()
@@ -749,10 +784,10 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                     Div.BackgroundTransparency = theme.ElementTransparency
                     Content.TextColor3 = theme.Text
                 end)
-                
+
                 RegisterElement(ParaFrame, (titleText or "") .. " " .. (contentText or ""))
 
-                local handler = {}
+                local handler = ParagraphElements
                 function handler:SetTitle(newTitle)
                     Title.Text = newTitle or ""
                     UpdateElementCacheText(ParaFrame, (Title.Text or "") .. " " .. (Content.Text or ""))
@@ -770,9 +805,11 @@ function AltisLib.CreateWindow(titleText, defaultSize)
                         ParaFrame:Destroy()
                     end
                 end
+                handler.Frame = ParaFrame
+                handler.ParagraphSection = ParagraphSection
                 return handler
             end
-            function Elements:CreateImage(imageId, size)
+function Elements:CreateImage(imageId, size)
                 local ImgLabel = Instance.new("ImageLabel")
                 ImgLabel.BorderSizePixel = 1
                 ImgLabel.BackgroundTransparency = 1
