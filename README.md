@@ -588,8 +588,8 @@ local ColorPicker = Tab:CreateColorPicker("ColorPicker", Color3.fromRGB(0, 0, 0)
 end)
 
 local Image = Tab:CreateImage("rbxassetid://95605701610484", UDim2.new(0, 50, 0, 50))
-local Label = Tab:CreateLabel("Label")
-local Paragraph = Tab:CreateParagraph("Paragraph Title", "Paragraph Text")
+local Label = Tab:CreateLabel("Longgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg Label")
+local Paragraph = Tab:CreateParagraph("Longggggggggggggggggggggggggggggggggggggggggggggggggg Paragraph Title", "Longggggggggggggggggggggggggggggggggggggggggggggggggg Paragraph Text")
 local Divider = Tab:CreateDivider()
 
 local SectionButton = Section:CreateButton("Section Button", function()
@@ -699,6 +699,99 @@ Tab:CreateButton("Destroy Section", function() Section:Destroy() end)
 Tab:CreateButton("Destroy Window", function()
     Window:Destroy()
 end)
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+local function CreateFloatingToggle()
+    if getgenv().AltisToggleGui then
+        pcall(function()
+            getgenv().AltisToggleGui:Destroy()
+        end)
+    end
+
+    local toggleGui = Instance.new("ScreenGui")
+    toggleGui.Name = "AltisToggleGui"
+    toggleGui.ResetOnSpawn = false
+    toggleGui.IgnoreGuiInset = true
+    toggleGui.DisplayOrder = 999999
+    toggleGui.Parent = CoreGui
+
+    getgenv().AltisToggleGui = toggleGui
+
+    local toggle = Instance.new("ImageButton")
+    toggle.Name = "AltisToggleButton"
+    toggle.Parent = toggleGui
+    toggle.Size = UDim2.fromOffset(48, 48)
+    toggle.Position = UDim2.new(0, 16, 0.5, -24)
+    toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    toggle.BorderSizePixel = 0
+    toggle.AutoButtonColor = false
+    toggle.Image = "rbxassetid://95605701610484"
+    toggle.Active = true
+    toggle.Selectable = true
+    toggle.ZIndex = 999999
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = toggle
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Transparency = 0.72
+    stroke.Thickness = 1.2
+    stroke.Parent = toggle
+
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        toggle.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+
+    toggle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = toggle.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    toggle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            updateDrag(input)
+        end
+    end)
+
+    toggle.MouseButton1Click:Connect(function()
+        Window:Toggle()
+    end)
+end
+
+CreateFloatingToggle()
+ 
 ```
 
 ---
