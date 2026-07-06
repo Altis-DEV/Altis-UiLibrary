@@ -857,6 +857,18 @@ CreateFloatingToggle()
 - `Destroy()`
 - `SetTitle(title)`
 - `SetText(text)`
+- `CreateButton()`
+- `CreateToggle()`
+- `CreateSlider()`
+- `CreateDropdown()`
+- `CreateMultiDropdown()`
+- `CreateTextBox()`
+- `CreateKeybind()`
+- `CreateColorPicker()`
+- `CreateImage()`
+- `CreateLabel()`
+- `CreateParagraph()`
+- `CreateDivider()`
 
 ## Divider
 - `Destroy()`
