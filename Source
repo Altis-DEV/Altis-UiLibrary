@@ -1,5 +1,5 @@
 -- =====================================================================
--- ALTIS LIB V4.2 - FULL SOURCE CODE
+-- ALTIS LIB V3.3 - FULL SOURCE CODE
 -- FEATURES: Destroy handlers, Window Toggle, open/close animations
 -- =====================================================================
 
@@ -154,7 +154,8 @@ function AltisLib.CreateWindow(titleText, defaultSize)
     SearchBox.PlaceholderText = "🔍 Search..."
     SearchBox.Font = Enum.Font.Code
     SearchBox.TextSize = 12
-    SearchBox.ClearTextOnFocus = false
+    SearchBox.ClearTextOnFocus = true
+    SearchBox.TextTruncate = Enum.TextTruncate.AtEnd
     SearchBox.ZIndex = 3
     SearchBox.Parent = TopBar
 
@@ -259,7 +260,7 @@ function AltisLib.CreateWindow(titleText, defaultSize)
     UserInputService.InputChanged:Connect(function(input)
         if resizing and IsValidInputChanged(input) then
             local delta = input.Position - resizeStart
-            local newWidth = math.max(350, startSize.X + delta.X)
+            local newWidth = math.max(250, startSize.X + delta.X)
             local newHeight = math.max(250, startSize.Y + delta.Y)
             MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
         end
@@ -1065,7 +1066,8 @@ function Elements:CreateImage(imageId, size)
                 TBox.PlaceholderText = placeholder or "Enter..."
                 TBox.Font = Enum.Font.Code
                 TBox.TextSize = 12
-                TBox.ClearTextOnFocus = false
+                TBox.ClearTextOnFocus = true
+                TBox.TextTruncate = Enum.TextTruncate.AtEnd
                 TBox.Parent = Frame
 
                 local function updateLayout()
@@ -1750,5 +1752,5 @@ function Elements:CreateImage(imageId, size)
     end
     return WindowObj
 end
--- Trả về Module
+
 return AltisLib
