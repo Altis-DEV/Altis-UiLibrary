@@ -3,30 +3,11 @@
 local Tab = {}
 
 function Tab.new(Context, WindowConfig, WindowData, Config)
-	assert(
-		Context,
-		"Tab.new: Context is required"
-	)
-
-	assert(
-		Context.ImGui,
-		"Tab.new: Context.ImGui is required"
-	)
-
-	assert(
-		Context.Core,
-		"Tab.new: Context.Core is required"
-	)
-
-	assert(
-		Context.Prefabs,
-		"Tab.new: Context.Prefabs is required"
-	)
-
-	assert(
-		Context.Load,
-		"Tab.new: Context.Load is required"
-	)
+	assert(Context, "Tab.new: Context is required")
+	assert(Context.ImGui, "Tab.new: Context.ImGui is required")
+	assert(Context.Core, "Tab.new: Context.Core is required")
+	assert(Context.Prefabs, "Tab.new: Context.Prefabs is required")
+	assert(Context.Load, "Tab.new: Context.Load is required")
 
 	Config = Config or {}
 
@@ -43,11 +24,6 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 	local Name = Config.Name or ""
 
-	local ScrollBarThickness =
-		Config.ScrollBarThickness
-		or WindowConfig.ScrollBarThickness
-		or 4
-
 	--==============================================================
 	-- TAB BUTTON
 	--==============================================================
@@ -62,68 +38,40 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 	--==============================================================
 	-- TAB CONTENT
+	--
+	-- IMPORTANT:
+	-- Body is already a ScrollingFrame.
+	-- We therefore keep the original ImGui architecture and place
+	-- the tab content directly inside Body.
 	--==============================================================
 
 	local Template = WindowData.Body.Template
 
-	-- Use the prefab ScrollBox instead of creating a new one.
-	local ScrollBox =
-		Context.Prefabs.ScrollBox:Clone()
-
-	ScrollBox.Name = Name
-	ScrollBox.Visible = Config.Visible == true
-	ScrollBox.Parent = WindowData.Body
-
-	--==============================================================
-	-- CONTENT FRAME
-	--==============================================================
-
-	local Content =
-		Template:Clone()
+	local Content = Template:Clone()
 
 	Content.Name = Name
-	Content.Visible = true
-	Content.Parent = ScrollBox
+	Content.Visible = Config.Visible == true
+	Content.Parent = WindowData.Body
 
 	--==============================================================
-	-- SCROLLBOX CONFIGURATION
+	-- CONTENT LAYOUT
 	--==============================================================
 
-	ScrollBox.CanvasPosition = Vector2.zero
+	local UIListLayout =
+		Content:FindFirstChildOfClass("UIListLayout")
 
-	ScrollBox.CanvasSize =
-		UDim2.new(0, 0, 0, 0)
+	local UIPadding =
+		Content:FindFirstChildOfClass("UIPadding")
 
-	ScrollBox.ScrollBarThickness =
-		ScrollBarThickness
-
-	ScrollBox.ScrollingDirection =
-		Enum.ScrollingDirection.Y
-
-	ScrollBox.VerticalScrollBarInset =
-		Enum.ScrollBarInset.ScrollBar
-
-	ScrollBox.HorizontalScrollBarInset =
-		Enum.ScrollBarInset.None
-
-	ScrollBox.AutomaticCanvasSize =
-		Enum.AutomaticSize.None
-
-	ScrollBox.ScrollingEnabled = false
-
-	--==============================================================
-	-- CONTENT SIZE
-	--==============================================================
-
-	Content.AutomaticSize =
-		Enum.AutomaticSize.Y
+	-- Let the tab content grow vertically according to its children.
+	Content.AutomaticSize = Enum.AutomaticSize.None
 
 	Content.Size =
 		UDim2.new(
 			1,
-			-ScrollBarThickness,
 			0,
-			0
+			0,
+			WindowData.Body.AbsoluteSize.Y
 		)
 
 	--==============================================================
@@ -139,15 +87,31 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		ParentWindowConfig = WindowConfig,
 
 		Button = Button,
-
-		ScrollBox = ScrollBox,
 		Content = Content,
 
-		ScrollBarThickness =
-			ScrollBarThickness,
+		UIListLayout = UIListLayout,
+		UIPadding = UIPadding,
 
+		Body = WindowData.Body,
+
+		Active = false,
 		Destroyed = false,
+
+		NeedsScroll = false,
 	}
+
+	Config.__TabData = Data
+
+	--==============================================================
+	-- TAB REGISTRY
+	--==============================================================
+
+	WindowData.Tabs = WindowData.Tabs or {}
+
+	table.insert(
+		WindowData.Tabs,
+		Config
+	)
 
 	--==============================================================
 	-- CONFIG REFERENCES
@@ -155,7 +119,6 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 	Config.Button = Button
 	Config.Content = Content
-	Config.ScrollBox = ScrollBox
 	Config.ParentWindow = WindowConfig
 
 	--==============================================================
@@ -164,7 +127,6 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 	if WindowConfig.RegisterInteraction then
 		WindowConfig:RegisterInteraction(Button)
-		WindowConfig:RegisterInteraction(ScrollBox)
 	end
 
 	--==============================================================
@@ -178,7 +140,13 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	)
 
 	--==============================================================
-	-- WINDOW BODY
+	-- TEMPLATE
+	--==============================================================
+
+	Template.Visible = false
+
+	--==============================================================
+	-- BODY SIZE
 	--==============================================================
 
 	if WindowConfig.UpdateBody then
@@ -186,13 +154,23 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	end
 
 	--==============================================================
-	-- HIDE ORIGINAL TEMPLATE
+	-- INITIAL SELECTION
 	--==============================================================
 
-	Template.Visible = false
+	if Config.Visible == true then
+		if WindowConfig.ShowTab then
+			WindowConfig:ShowTab(Config)
+		end
+	elseif #WindowData.Tabs == 1 then
+		-- First tab becomes the default tab when no tab was
+		-- explicitly marked Visible.
+		if WindowConfig.ShowTab then
+			WindowConfig:ShowTab(Config)
+		end
+	end
 
 	--==============================================================
-	-- INITIAL UPDATE
+	-- FIRST SCROLL UPDATE
 	--==============================================================
 
 	task.defer(function()
@@ -200,7 +178,9 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 			return
 		end
 
-		Config:UpdateScroll()
+		if Config.UpdateScroll then
+			Config:UpdateScroll()
+		end
 	end)
 
 	return Config
