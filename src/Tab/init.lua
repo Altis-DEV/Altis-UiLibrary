@@ -37,7 +37,7 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		TabBar.Position = UDim2.fromScale(0, 0)
 
 		TabBar.CanvasPosition = Vector2.zero
-		TabBar.CanvasSize = UDim2.fromScale(0, 0)
+		TabBar.CanvasSize = UDim2.fromOffset(0, 0)
 
 		TabBar.AutomaticCanvasSize =
 			Enum.AutomaticSize.X
@@ -47,7 +47,10 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 		TabBar.ScrollingEnabled = true
 
-		TabBar.ScrollBarThickness = 4
+		TabBar.ScrollBarThickness =
+			Config.TabBarScrollBarThickness
+			or WindowConfig.TabBarScrollBarThickness
+			or 4
 
 		TabBar.HorizontalScrollBarInset =
 			Enum.ScrollBarInset.ScrollBar
@@ -55,8 +58,9 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		TabBar.VerticalScrollBarInset =
 			Enum.ScrollBarInset.None
 
-		TabBar.ScrollingBehavior =
-			Enum.ScrollingBehavior.Elastic
+		-- Correct Roblox property for touch elastic scrolling.
+		TabBar.ElasticBehavior =
+			Enum.ElasticBehavior.WhenScrollable
 
 		TabBar.Parent =
 			WindowData.ToolBar
@@ -84,25 +88,35 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		WindowData.TabBar = TabBar
 		WindowData.TabBarLayout = Layout
 
-		-- The original prefab TabButton is only a template.
+		-- Original button is only a template.
 		WindowData.ToolBar.TabButton.Visible = false
 
-		-- Prevent Window mobile dragging while touching the toolbar.
+		-- Toolbar owns touch input.
 		if WindowConfig.RegisterInteraction then
 			WindowConfig:RegisterInteraction(TabBar)
 		end
 
-		-- Automatically keep the canvas synchronized with its children.
+		-- Keep horizontal canvas synchronized with content.
+		local function UpdateTabBarCanvas()
+			if not TabBar.Parent then
+				return
+			end
+
+			local ContentWidth =
+				Layout.AbsoluteContentSize.X
+
+			TabBar.CanvasSize =
+				UDim2.fromOffset(
+					ContentWidth + 4,
+					0
+				)
+		end
+
 		Layout:GetPropertyChangedSignal(
 			"AbsoluteContentSize"
-		):Connect(function()
-			TabBar.CanvasSize = UDim2.new(
-				0,
-				Layout.AbsoluteContentSize.X + 4,
-				0,
-				0
-			)
-		end)
+		):Connect(UpdateTabBarCanvas)
+
+		task.defer(UpdateTabBarCanvas)
 	end
 
 	--==============================================================
@@ -117,7 +131,10 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	Button.Visible = true
 	Button.Active = true
 	Button.Selectable = true
-	Button.LayoutOrder = #WindowData.Tabs + 1
+
+	Button.LayoutOrder =
+		#WindowData.Tabs + 1
+
 	Button.Parent = TabBar
 
 	--==============================================================
@@ -164,7 +181,6 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 		Button = Button,
 		Content = Content,
-
 		Body = WindowData.Body,
 
 		TabBar = TabBar,
@@ -204,13 +220,21 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	Config.ParentWindow = WindowConfig
 
 	--==============================================================
-	-- TEMPLATE
+	-- WINDOW INTERACTION
+	--==============================================================
+
+	if WindowConfig.RegisterInteraction then
+		WindowConfig:RegisterInteraction(Button)
+	end
+
+	--==============================================================
+	-- HIDE TEMPLATE
 	--==============================================================
 
 	Template.Visible = false
 
 	--==============================================================
-	-- METHODS
+	-- ATTACH METHODS
 	--==============================================================
 
 	Methods.Attach(
@@ -218,6 +242,14 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		Config,
 		Data
 	)
+
+	--==============================================================
+	-- BODY UPDATE
+	--==============================================================
+
+	if WindowConfig.UpdateBody then
+		WindowConfig:UpdateBody()
+	end
 
 	--==============================================================
 	-- INITIAL TAB
@@ -230,7 +262,7 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	end
 
 	--==============================================================
-	-- INITIAL SCROLL UPDATE
+	-- INITIAL UPDATE
 	--==============================================================
 
 	task.defer(function()
@@ -240,15 +272,6 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 		if Config.UpdateScroll then
 			Config:UpdateScroll()
-		end
-
-		if WindowData.TabBarLayout then
-			WindowData.TabBar.CanvasSize = UDim2.new(
-				0,
-				WindowData.TabBarLayout.AbsoluteContentSize.X + 4,
-				0,
-				0
-			)
 		end
 	end)
 
