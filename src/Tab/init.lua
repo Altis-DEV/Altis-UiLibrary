@@ -18,11 +18,92 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		"src/Tab/method.lua"
 	)
 
+	local Name = Config.Name or ""
+
 	--==============================================================
-	-- CONFIG
+	-- TAB BAR
 	--==============================================================
 
-	local Name = Config.Name or ""
+	local TabBar = WindowData.TabBar
+
+	if not TabBar then
+		TabBar = Instance.new("ScrollingFrame")
+
+		TabBar.Name = "TabBar"
+		TabBar.BackgroundTransparency = 1
+		TabBar.BorderSizePixel = 0
+
+		TabBar.Size = UDim2.fromScale(1, 1)
+		TabBar.Position = UDim2.fromScale(0, 0)
+
+		TabBar.CanvasPosition = Vector2.zero
+		TabBar.CanvasSize = UDim2.fromScale(0, 0)
+
+		TabBar.AutomaticCanvasSize =
+			Enum.AutomaticSize.X
+
+		TabBar.ScrollingDirection =
+			Enum.ScrollingDirection.X
+
+		TabBar.ScrollingEnabled = true
+
+		TabBar.ScrollBarThickness = 4
+
+		TabBar.HorizontalScrollBarInset =
+			Enum.ScrollBarInset.ScrollBar
+
+		TabBar.VerticalScrollBarInset =
+			Enum.ScrollBarInset.None
+
+		TabBar.ScrollingBehavior =
+			Enum.ScrollingBehavior.Elastic
+
+		TabBar.Parent =
+			WindowData.ToolBar
+
+		local Layout =
+			Instance.new("UIListLayout")
+
+		Layout.FillDirection =
+			Enum.FillDirection.Horizontal
+
+		Layout.HorizontalAlignment =
+			Enum.HorizontalAlignment.Left
+
+		Layout.VerticalAlignment =
+			Enum.VerticalAlignment.Center
+
+		Layout.SortOrder =
+			Enum.SortOrder.LayoutOrder
+
+		Layout.Padding =
+			UDim.new(0, 4)
+
+		Layout.Parent = TabBar
+
+		WindowData.TabBar = TabBar
+		WindowData.TabBarLayout = Layout
+
+		-- The original prefab TabButton is only a template.
+		WindowData.ToolBar.TabButton.Visible = false
+
+		-- Prevent Window mobile dragging while touching the toolbar.
+		if WindowConfig.RegisterInteraction then
+			WindowConfig:RegisterInteraction(TabBar)
+		end
+
+		-- Automatically keep the canvas synchronized with its children.
+		Layout:GetPropertyChangedSignal(
+			"AbsoluteContentSize"
+		):Connect(function()
+			TabBar.CanvasSize = UDim2.new(
+				0,
+				Layout.AbsoluteContentSize.X + 4,
+				0,
+				0
+			)
+		end)
+	end
 
 	--==============================================================
 	-- TAB BUTTON
@@ -34,37 +115,26 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	Button.Name = Name
 	Button.Text = Name
 	Button.Visible = true
-	Button.Parent = WindowData.ToolBar
+	Button.Active = true
+	Button.Selectable = true
+	Button.LayoutOrder = #WindowData.Tabs + 1
+	Button.Parent = TabBar
 
 	--==============================================================
 	-- TAB CONTENT
-	--
-	-- IMPORTANT:
-	-- Body is already a ScrollingFrame.
-	-- We therefore keep the original ImGui architecture and place
-	-- the tab content directly inside Body.
 	--==============================================================
 
-	local Template = WindowData.Body.Template
+	local Template =
+		WindowData.Body.Template
 
-	local Content = Template:Clone()
+	local Content =
+		Template:Clone()
 
 	Content.Name = Name
-	Content.Visible = Config.Visible == true
-	Content.Parent = WindowData.Body
+	Content.Visible = false
 
-	--==============================================================
-	-- CONTENT LAYOUT
-	--==============================================================
-
-	local UIListLayout =
-		Content:FindFirstChildOfClass("UIListLayout")
-
-	local UIPadding =
-		Content:FindFirstChildOfClass("UIPadding")
-
-	-- Let the tab content grow vertically according to its children.
-	Content.AutomaticSize = Enum.AutomaticSize.None
+	Content.Position =
+		UDim2.fromOffset(0, 0)
 
 	Content.Size =
 		UDim2.new(
@@ -73,6 +143,12 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 			0,
 			WindowData.Body.AbsoluteSize.Y
 		)
+
+	Content.AutomaticSize =
+		Enum.AutomaticSize.None
+
+	Content.Parent =
+		WindowData.Body
 
 	--==============================================================
 	-- DATA
@@ -89,45 +165,49 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		Button = Button,
 		Content = Content,
 
-		UIListLayout = UIListLayout,
-		UIPadding = UIPadding,
-
 		Body = WindowData.Body,
+
+		TabBar = TabBar,
+
+		UIListLayout =
+			Content:FindFirstChildOfClass(
+				"UIListLayout"
+			),
+
+		UIPadding =
+			Content:FindFirstChildOfClass(
+				"UIPadding"
+			),
 
 		Active = false,
 		Destroyed = false,
-
 		NeedsScroll = false,
+
+		ScrollBarThickness =
+			Config.ScrollBarThickness
+			or WindowConfig.ScrollBarThickness
+			or 4,
 	}
 
 	Config.__TabData = Data
 
-	--==============================================================
-	-- TAB REGISTRY
-	--==============================================================
-
-	WindowData.Tabs = WindowData.Tabs or {}
+	WindowData.Tabs =
+		WindowData.Tabs or {}
 
 	table.insert(
 		WindowData.Tabs,
 		Config
 	)
 
-	--==============================================================
-	-- CONFIG REFERENCES
-	--==============================================================
-
 	Config.Button = Button
 	Config.Content = Content
 	Config.ParentWindow = WindowConfig
 
 	--==============================================================
-	-- WINDOW DRAG PROTECTION
+	-- TEMPLATE
 	--==============================================================
 
-	if WindowConfig.RegisterInteraction then
-		WindowConfig:RegisterInteraction(Button)
-	end
+	Template.Visible = false
 
 	--==============================================================
 	-- METHODS
@@ -140,37 +220,17 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	)
 
 	--==============================================================
-	-- TEMPLATE
-	--==============================================================
-
-	Template.Visible = false
-
-	--==============================================================
-	-- BODY SIZE
-	--==============================================================
-
-	if WindowConfig.UpdateBody then
-		WindowConfig:UpdateBody()
-	end
-
-	--==============================================================
-	-- INITIAL SELECTION
+	-- INITIAL TAB
 	--==============================================================
 
 	if Config.Visible == true then
-		if WindowConfig.ShowTab then
-			WindowConfig:ShowTab(Config)
-		end
+		WindowConfig:ShowTab(Config)
 	elseif #WindowData.Tabs == 1 then
-		-- First tab becomes the default tab when no tab was
-		-- explicitly marked Visible.
-		if WindowConfig.ShowTab then
-			WindowConfig:ShowTab(Config)
-		end
+		WindowConfig:ShowTab(Config)
 	end
 
 	--==============================================================
-	-- FIRST SCROLL UPDATE
+	-- INITIAL SCROLL UPDATE
 	--==============================================================
 
 	task.defer(function()
@@ -180,6 +240,15 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 		if Config.UpdateScroll then
 			Config:UpdateScroll()
+		end
+
+		if WindowData.TabBarLayout then
+			WindowData.TabBar.CanvasSize = UDim2.new(
+				0,
+				WindowData.TabBarLayout.AbsoluteContentSize.X + 4,
+				0,
+				0
+			)
 		end
 	end)
 
