@@ -3,7 +3,7 @@
 local Methods = {}
 
 --==============================================================
--- CONTENT SIZE
+-- CONTENT / SCROLL
 --==============================================================
 
 function Methods.GetContentSize(Data)
@@ -14,45 +14,37 @@ function Methods.GetContentSize(Data)
 	return Data.Content.AbsoluteSize
 end
 
---==============================================================
--- SCROLL UPDATE
---==============================================================
-
 function Methods.UpdateScroll(Data)
-	local ScrollFrame = Data.ScrollFrame
+	local ScrollBox = Data.ScrollBox
 	local Content = Data.Content
 
-	if not ScrollFrame or not Content then
-		return Data
+	if not ScrollBox or not Content then
+		return
 	end
 
-	local ViewportHeight = ScrollFrame.AbsoluteSize.Y
+	local ViewportHeight = ScrollBox.AbsoluteSize.Y
 	local ContentHeight = Content.AbsoluteSize.Y
 
 	if ViewportHeight <= 0 then
-		return Data
+		return
 	end
 
-	-- Keep the native Roblox scrollbar accurate.
-	ScrollFrame.CanvasSize = UDim2.new(
+	-- The content itself determines the canvas height.
+	ScrollBox.CanvasSize = UDim2.new(
 		0,
 		0,
 		0,
 		math.max(ContentHeight, ViewportHeight)
 	)
 
-	-- The native scrollbar automatically scales its thumb
-	-- according to CanvasSize / viewport size.
-	local CanScroll = ContentHeight > ViewportHeight + 0.5
-
-	ScrollFrame.ScrollBarThickness =
-		CanScroll
-		and Data.ScrollBarThickness
-		or 0
-
-	ScrollFrame.ScrollingEnabled = CanScroll
-
-	return Data
+	-- Hide the scrollbar when there is nothing to scroll.
+	if ContentHeight > ViewportHeight + 1 then
+		ScrollBox.ScrollingEnabled = true
+		ScrollBox.ScrollBarThickness = Data.ScrollBarThickness
+	else
+		ScrollBox.ScrollingEnabled = false
+		ScrollBox.ScrollBarThickness = 0
+	end
 end
 
 --==============================================================
@@ -60,15 +52,15 @@ end
 --==============================================================
 
 function Methods.SetVisible(Data, Visible)
-	if Data.ScrollFrame then
-		Data.ScrollFrame.Visible = Visible == true
+	if Data.ScrollBox then
+		Data.ScrollBox.Visible = Visible == true
 	end
 
 	return Data
 end
 
 --==============================================================
--- SELECT
+-- SELECTION
 --==============================================================
 
 function Methods.Select(Context, Config)
@@ -78,55 +70,44 @@ function Methods.Select(Context, Config)
 
 	local ParentWindow = Config.ParentWindow
 
-	if ParentWindow
-		and ParentWindow.ShowTab then
-
+	if ParentWindow and ParentWindow.ShowTab then
 		ParentWindow:ShowTab(Config)
 	end
 
 	return Config
 end
 
---==============================================================
--- DESELECT
---==============================================================
-
 function Methods.Deselect(Data)
-	if Data.ScrollFrame then
-		Data.ScrollFrame.Visible = false
+	if Data.ScrollBox then
+		Data.ScrollBox.Visible = false
 	end
 
 	return Data
 end
 
 --==============================================================
--- SCROLL TO TOP
+-- SCROLL CONTROL
 --==============================================================
 
 function Methods.ScrollToTop(Data)
-	if Data.ScrollFrame then
-		Data.ScrollFrame.CanvasPosition = Vector2.zero
+	if Data.ScrollBox then
+		Data.ScrollBox.CanvasPosition = Vector2.zero
 	end
 
 	return Data
 end
 
---==============================================================
--- SCROLL TO BOTTOM
---==============================================================
-
 function Methods.ScrollToBottom(Data)
-	if not Data.ScrollFrame then
+	local ScrollBox = Data.ScrollBox
+
+	if not ScrollBox then
 		return Data
 	end
 
-	local CanvasHeight =
-		Data.ScrollFrame.AbsoluteCanvasSize.Y
+	local CanvasHeight = ScrollBox.AbsoluteCanvasSize.Y
+	local ViewportHeight = ScrollBox.AbsoluteWindowSize.Y
 
-	local ViewportHeight =
-		Data.ScrollFrame.AbsoluteWindowSize.Y
-
-	Data.ScrollFrame.CanvasPosition = Vector2.new(
+	ScrollBox.CanvasPosition = Vector2.new(
 		0,
 		math.max(0, CanvasHeight - ViewportHeight)
 	)
@@ -134,12 +115,10 @@ function Methods.ScrollToBottom(Data)
 	return Data
 end
 
---==============================================================
--- SCROLL POSITION
---==============================================================
-
 function Methods.SetScrollPosition(Data, Position)
-	if not Data.ScrollFrame then
+	local ScrollBox = Data.ScrollBox
+
+	if not ScrollBox then
 		return Data
 	end
 
@@ -151,7 +130,7 @@ function Methods.SetScrollPosition(Data, Position)
 		Y = tonumber(Position) or 0
 	end
 
-	Data.ScrollFrame.CanvasPosition = Vector2.new(
+	ScrollBox.CanvasPosition = Vector2.new(
 		0,
 		math.max(0, Y)
 	)
@@ -160,37 +139,40 @@ function Methods.SetScrollPosition(Data, Position)
 end
 
 function Methods.GetScrollPosition(Data)
-	if not Data.ScrollFrame then
+	if not Data.ScrollBox then
 		return Vector2.zero
 	end
 
-	return Data.ScrollFrame.CanvasPosition
+	return Data.ScrollBox.CanvasPosition
 end
 
 --==============================================================
--- ATTACH
+-- ATTACH METHODS
 --==============================================================
 
 function Methods.Attach(Context, Config, Data)
 	local ImGui = Context.ImGui
-	local WindowConfig = Config.ParentWindow
 
 	--============================================================
-	-- BASIC REFERENCES
+	-- REFERENCES
 	--============================================================
 
 	Config.Button = Data.Button
 	Config.Content = Data.Content
-	Config.ScrollFrame = Data.ScrollFrame
-	Config.ParentWindow = WindowConfig
+	Config.ScrollBox = Data.ScrollBox
+	Config.ParentWindow = Data.ParentWindowConfig
 
 	--============================================================
-	-- BASIC METHODS
+	-- CONTENT
 	--============================================================
 
 	function Config:GetContentSize()
 		return Methods.GetContentSize(Data)
 	end
+
+	--============================================================
+	-- VISIBILITY
+	--============================================================
 
 	function Config:SetVisible(Visible)
 		Methods.SetVisible(Data, Visible)
@@ -198,11 +180,12 @@ function Methods.Attach(Context, Config, Data)
 		return self
 	end
 
+	--============================================================
+	-- SELECTION
+	--============================================================
+
 	function Config:Select()
-		return Methods.Select(
-			Context,
-			self
-		)
+		return Methods.Select(Context, self)
 	end
 
 	function Config:Deselect()
@@ -212,7 +195,7 @@ function Methods.Attach(Context, Config, Data)
 	end
 
 	--============================================================
-	-- SCROLL METHODS
+	-- SCROLL
 	--============================================================
 
 	function Config:UpdateScroll()
@@ -247,29 +230,16 @@ function Methods.Attach(Context, Config, Data)
 	end
 
 	--============================================================
-	-- INITIAL STATE
-	--============================================================
-
-	Data.ScrollFrame.Visible =
-		Config.Visible == true
-
-	Data.Content.Visible = true
-
-	--============================================================
 	-- TAB BUTTON
 	--============================================================
 
 	Data.Button.Activated:Connect(function()
-		if WindowConfig
-			and WindowConfig.ShowTab then
+		if Data.ParentWindowConfig
+			and Data.ParentWindowConfig.ShowTab then
 
-			WindowConfig:ShowTab(Config)
+			Data.ParentWindowConfig:ShowTab(self)
 		end
 	end)
-
-	--============================================================
-	-- TAB ANIMATION
-	--============================================================
 
 	ImGui:ApplyAnimations(
 		Data.Button,
@@ -292,17 +262,12 @@ function Methods.Attach(Context, Config, Data)
 		"AbsoluteSize"
 	):Connect(Update)
 
-	Data.ScrollFrame:GetPropertyChangedSignal(
+	Data.ScrollBox:GetPropertyChangedSignal(
 		"AbsoluteSize"
 	):Connect(Update)
 
-	-- Child changes can affect UIListLayout size.
 	Data.Content.ChildAdded:Connect(Update)
 	Data.Content.ChildRemoved:Connect(Update)
-
-	--============================================================
-	-- INITIAL UPDATE
-	--============================================================
 
 	task.defer(Update)
 
