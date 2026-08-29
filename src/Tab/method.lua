@@ -31,7 +31,8 @@ function Methods.GetContentHeight(Data)
 	end
 
 	if Layout then
-		return Layout.AbsoluteContentSize.Y
+		return
+			Layout.AbsoluteContentSize.Y
 			+ Methods.GetPaddingY(Data)
 	end
 
@@ -39,21 +40,19 @@ function Methods.GetContentHeight(Data)
 end
 
 --==============================================================
--- VIEWPORT HEIGHT
+-- VIEWPORT
 --==============================================================
 
 function Methods.GetViewportHeight(Data)
-	local Body = Data.Body
-
-	if not Body then
+	if not Data.Body then
 		return 0
 	end
 
-	return Body.AbsoluteSize.Y
+	return Data.Body.AbsoluteSize.Y
 end
 
 --==============================================================
--- CONTENT SIZE
+-- UPDATE CONTENT SIZE
 --==============================================================
 
 function Methods.UpdateContentSize(Data)
@@ -69,7 +68,6 @@ function Methods.UpdateContentSize(Data)
 	local ViewportHeight =
 		Methods.GetViewportHeight(Data)
 
-	-- A tab should always cover at least the visible Body area.
 	local Height =
 		math.max(
 			ContentHeight,
@@ -86,17 +84,20 @@ function Methods.UpdateContentSize(Data)
 end
 
 --==============================================================
--- SCROLL UPDATE
+-- UPDATE SCROLL
 --==============================================================
 
 function Methods.UpdateScroll(Data)
+	if Data.Destroyed then
+		return
+	end
+
 	local Body = Data.Body
 
 	if not Body or not Data.Content then
 		return
 	end
 
-	-- Update the content's physical height first.
 	Methods.UpdateContentSize(Data)
 
 	local ContentHeight =
@@ -108,10 +109,6 @@ function Methods.UpdateScroll(Data)
 	if ViewportHeight <= 0 then
 		return
 	end
-
-	--============================================================
-	-- CANVAS SIZE
-	--============================================================
 
 	local CanvasHeight =
 		math.max(
@@ -127,10 +124,6 @@ function Methods.UpdateScroll(Data)
 			CanvasHeight
 		)
 
-	--============================================================
-	-- SCROLLBAR VISIBILITY
-	--============================================================
-
 	local CanScroll =
 		ContentHeight
 		> ViewportHeight + 1
@@ -139,6 +132,9 @@ function Methods.UpdateScroll(Data)
 
 	if CanScroll then
 		Body.ScrollingEnabled = true
+
+		Body.ScrollBarThickness =
+			Data.ScrollBarThickness
 
 		Body.ScrollingDirection =
 			Enum.ScrollingDirection.Y
@@ -149,14 +145,6 @@ function Methods.UpdateScroll(Data)
 		Body.HorizontalScrollBarInset =
 			Enum.ScrollBarInset.None
 
-		Body.ScrollBarThickness =
-			Data.ScrollBarThickness or 4
-
-		-- The native Roblox scrollbar automatically changes
-		-- its thumb size from CanvasSize / viewport size.
-
-		-- While the Body is scrollable, its touch interaction
-		-- gets priority over Window dragging.
 		if Data.ParentWindowConfig
 			and Data.ParentWindowConfig.RegisterInteraction then
 
@@ -166,14 +154,9 @@ function Methods.UpdateScroll(Data)
 		end
 	else
 		Body.ScrollingEnabled = false
-
 		Body.ScrollBarThickness = 0
+		Body.CanvasPosition = Vector2.zero
 
-		Body.CanvasPosition =
-			Vector2.zero
-
-		-- Remove the Body from the Window drag protection
-		-- when there is nothing to scroll.
 		if Data.ParentWindowConfig
 			and Data.ParentWindowConfig.UnregisterInteraction then
 
@@ -187,7 +170,7 @@ function Methods.UpdateScroll(Data)
 end
 
 --==============================================================
--- CONTENT SIZE API
+-- CONTENT SIZE
 --==============================================================
 
 function Methods.GetContentSize(Data)
@@ -203,8 +186,9 @@ end
 --==============================================================
 
 function Methods.SetVisible(Data, Visible)
-	Data.Content.Visible =
-		Visible == true
+	if Data.Content then
+		Data.Content.Visible = Visible == true
+	end
 
 	return Data
 end
@@ -233,26 +217,24 @@ function Methods.ScrollToBottom(Data)
 		return Data
 	end
 
-	local CanvasHeight =
-		Body.AbsoluteCanvasSize.Y
-
-	local ViewportHeight =
-		Body.AbsoluteWindowSize.Y
+	local Maximum =
+		math.max(
+			0,
+			Body.AbsoluteCanvasSize.Y
+			- Body.AbsoluteWindowSize.Y
+		)
 
 	Body.CanvasPosition =
 		Vector2.new(
 			0,
-			math.max(
-				0,
-				CanvasHeight - ViewportHeight
-			)
+			Maximum
 		)
 
 	return Data
 end
 
 --==============================================================
--- SET SCROLL
+-- SCROLL POSITION
 --==============================================================
 
 function Methods.SetScrollPosition(Data, Position)
@@ -270,7 +252,7 @@ function Methods.SetScrollPosition(Data, Position)
 		Y = tonumber(Position) or 0
 	end
 
-	local MaxY =
+	local Maximum =
 		math.max(
 			0,
 			Body.AbsoluteCanvasSize.Y
@@ -280,15 +262,15 @@ function Methods.SetScrollPosition(Data, Position)
 	Body.CanvasPosition =
 		Vector2.new(
 			0,
-			math.clamp(Y, 0, MaxY)
+			math.clamp(
+				Y,
+				0,
+				Maximum
+			)
 		)
 
 	return Data
 end
-
---==============================================================
--- GET SCROLL
---==============================================================
 
 function Methods.GetScrollPosition(Data)
 	if not Data.Body then
@@ -324,10 +306,6 @@ end
 function Methods.Attach(Context, Config, Data)
 	local ImGui = Context.ImGui
 
-	--============================================================
-	-- REFERENCES
-	--============================================================
-
 	Config.Button =
 		Data.Button
 
@@ -350,10 +328,6 @@ function Methods.Attach(Context, Config, Data)
 	--============================================================
 
 	function Config:SetVisible(Visible)
-		if Data.Destroyed then
-			return self
-		end
-
 		Methods.SetVisible(
 			Data,
 			Visible
@@ -374,14 +348,10 @@ function Methods.Attach(Context, Config, Data)
 	end
 
 	--============================================================
-	-- SCROLL
+	-- SCROLL METHODS
 	--============================================================
 
 	function Config:UpdateScroll()
-		if Data.Destroyed then
-			return self
-		end
-
 		Methods.UpdateScroll(Data)
 
 		return self
@@ -417,14 +387,22 @@ function Methods.Attach(Context, Config, Data)
 	--============================================================
 
 	Data.Button.Activated:Connect(function()
+		if Data.Destroyed then
+			return
+		end
+
 		if Data.ParentWindowConfig
 			and Data.ParentWindowConfig.ShowTab then
 
 			Data.ParentWindowConfig:ShowTab(
-				self
+				Config
 			)
 		end
 	end)
+
+	--============================================================
+	-- ANIMATION
+	--============================================================
 
 	ImGui:ApplyAnimations(
 		Data.Button,
@@ -432,7 +410,7 @@ function Methods.Attach(Context, Config, Data)
 	)
 
 	--============================================================
-	-- CONTENT SIZE WATCH
+	-- CONTENT WATCHER
 	--============================================================
 
 	local function Update()
@@ -440,16 +418,13 @@ function Methods.Attach(Context, Config, Data)
 			return
 		end
 
-		-- Only the active tab controls Body.CanvasSize.
-		if not Data.Active then
-			Methods.UpdateContentSize(Data)
-			return
-		end
+		Methods.UpdateContentSize(Data)
 
-		Methods.UpdateScroll(Data)
+		if Data.Active then
+			Methods.UpdateScroll(Data)
+		end
 	end
 
-	-- UIListLayout changes whenever children change size/count.
 	if Data.UIListLayout then
 		Data.UIListLayout:GetPropertyChangedSignal(
 			"AbsoluteContentSize"
@@ -475,10 +450,6 @@ function Methods.Attach(Context, Config, Data)
 		end
 	end)
 
-	--============================================================
-	-- RETURN
-	--============================================================
-
 	return Config
 end
 
@@ -488,7 +459,6 @@ end
 
 function Methods.Activate(Data)
 	Data.Active = true
-
 	Data.Content.Visible = true
 
 	Methods.UpdateScroll(Data)
@@ -502,7 +472,6 @@ end
 
 function Methods.Deactivate(Data)
 	Data.Active = false
-
 	Data.Content.Visible = false
 
 	return Data
