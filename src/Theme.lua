@@ -1,35 +1,19 @@
 local Theme = {}
 
---==================================================
--- Default Theme
---==================================================
-
 Theme.Default = {
-    Text = Color3.fromRGB(255, 255, 255),
-
-    Topbar = Color3.fromRGB(35, 35, 35),
-
-    TabContainer = Color3.fromRGB(30, 30, 30),
-
-    Background = Color3.fromRGB(25, 25, 25),
-
-    ResizeCorner = Color3.fromRGB(130, 130, 130),
+    Text = Color3.fromRGB(200, 200, 200),
+    Topbar = Color3.fromRGB(41, 74, 122),
+    TabContainer = Color3.fromRGB(37, 38, 40),
+    Background = Color3.fromRGB(21, 22, 23),
+    ResizeCorner = Color3.fromRGB(160, 160, 160),
 }
 
---==================================================
--- Light Theme
---==================================================
-
 Theme.Light = {
-    Text = Color3.fromRGB(25, 25, 25),
-
-    Topbar = Color3.fromRGB(235, 235, 235),
-
-    TabContainer = Color3.fromRGB(220, 220, 220),
-
-    Background = Color3.fromRGB(245, 245, 245),
-
-    ResizeCorner = Color3.fromRGB(120, 120, 120),
+    Text = Color3.fromRGB(35, 35, 35),
+    Topbar = Color3.fromRGB(210, 215, 222),
+    TabContainer = Color3.fromRGB(232, 234, 237),
+    Background = Color3.fromRGB(245, 246, 248),
+    ResizeCorner = Color3.fromRGB(105, 105, 105),
 }
 
 return Theme
