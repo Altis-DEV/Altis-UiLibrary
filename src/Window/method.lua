@@ -7,20 +7,17 @@ local Methods = {}
 --==============================================================
 
 function Methods.GetHeaderSizeY(Data)
-	local ToolBar = Data.ToolBar
-	local TitleBar = Data.TitleBar
-
 	local ToolbarY =
-		ToolBar.Visible
-		and ToolBar.AbsoluteSize.Y
+		Data.ToolBar.Visible
+		and Data.ToolBar.AbsoluteSize.Y
 		or 0
 
-	local TitlebarY =
-		TitleBar.Visible
-		and TitleBar.AbsoluteSize.Y
+	local TitleBarY =
+		Data.TitleBar.Visible
+		and Data.TitleBar.AbsoluteSize.Y
 		or 0
 
-	return ToolbarY + TitlebarY
+	return ToolbarY + TitleBarY
 end
 
 --==============================================================
@@ -57,9 +54,6 @@ function Methods.Attach(Context, Config, Data)
 
 	Data.Destroyed = false
 
-	Data.Tabs =
-		Data.Tabs or {}
-
 	--============================================================
 	-- CLOSE
 	--============================================================
@@ -70,7 +64,7 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		local Callback =
-			self.CloseCallback
+			Config.CloseCallback
 
 		self:SetVisible(false)
 
@@ -92,7 +86,9 @@ function Methods.Attach(Context, Config, Data)
 
 		Data.Destroyed = true
 
-		ImGui.Windows[Data.Window] = nil
+		ImGui.Windows[
+			Data.Window
+		] = nil
 
 		Data.Window:Destroy()
 
@@ -166,7 +162,9 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		local HeaderSizeY =
-			Methods.GetHeaderSizeY(Data)
+			Methods.GetHeaderSizeY(
+				Data
+			)
 
 		local NewSize =
 			UDim2.new(
@@ -177,14 +175,17 @@ function Methods.Attach(Context, Config, Data)
 				Size.Y.Offset + HeaderSizeY
 			)
 
-		self.Size = NewSize
-		Data.Window.Size = NewSize
+		Config.Size =
+			NewSize
+
+		Data.Window.Size =
+			NewSize
 
 		return self
 	end
 
 	--============================================================
-	-- OPEN / CLOSE
+	-- OPEN
 	--============================================================
 
 	function Config:SetOpen(Open, NoAnimation)
@@ -193,7 +194,9 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		Open = Open == true
-		self.Open = Open
+
+		Config.Open =
+			Open
 
 		local WindowSize =
 			Data.Window.AbsoluteSize
@@ -227,7 +230,7 @@ function Methods.Attach(Context, Config, Data)
 			{
 				Size =
 					Open
-					and self.Size
+					and Config.Size
 					or UDim2.fromOffset(
 						WindowSize.X,
 						TitleBarSize.Y
@@ -261,7 +264,7 @@ function Methods.Attach(Context, Config, Data)
 
 		return TabModule.new(
 			Context,
-			self,
+			Config,
 			Data,
 			TabConfig or {}
 		)
@@ -288,7 +291,7 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		--========================================================
-		-- DEACTIVATE EVERY OTHER TAB
+		-- HIDE ALL OTHER TABS
 		--========================================================
 
 		for _, OtherConfig in next, Data.Tabs do
@@ -304,14 +307,24 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		--========================================================
-		-- ACTIVATE TARGET
+		-- ACTIVATE
 		--========================================================
 
 		TargetData.Active = true
 		TargetData.Content.Visible = true
 
 		--========================================================
-		-- RESET SCROLL
+		-- STORE STATE IN RAW CONFIG
+		--
+		-- NEVER use self.ActiveTab here.
+		-- self is the merged GUI object wrapper.
+		--========================================================
+
+		Config.ActiveTab =
+			TabConfig
+
+		--========================================================
+		-- RESET BODY SCROLL
 		--========================================================
 
 		Data.Body.CanvasPosition =
@@ -325,7 +338,7 @@ function Methods.Attach(Context, Config, Data)
 			UDim2.fromOffset(0, 5)
 
 		--========================================================
-		-- ANIMATION
+		-- PAGE ANIMATION
 		--========================================================
 
 		if not TabConfig.NoAnimation then
@@ -333,7 +346,10 @@ function Methods.Attach(Context, Config, Data)
 				TargetData.Content,
 				{
 					Position =
-						UDim2.fromOffset(0, 0),
+						UDim2.fromOffset(
+							0,
+							0
+						),
 				}
 			)
 		else
@@ -345,23 +361,24 @@ function Methods.Attach(Context, Config, Data)
 		-- UPDATE SCROLL
 		--========================================================
 
-		local TabMethod =
+		local TabMethods =
 			Context.Load(
 				"src/Tab/method.lua"
 			)
 
-		TabMethod.UpdateScroll(
+		TabMethods.UpdateScroll(
 			TargetData
 		)
 
-		--========================================================
-		-- KEEP ACTIVE TAB REACHABLE
-		--========================================================
-
-		self.ActiveTab =
-			TabConfig
-
 		return self
+	end
+
+	--============================================================
+	-- ACTIVE TAB
+	--============================================================
+
+	function Config:GetActiveTab()
+		return Config.ActiveTab
 	end
 
 	--============================================================
