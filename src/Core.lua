@@ -44,7 +44,7 @@ Core.UIAssetId = "rbxassetid://76246418997296"
 Core.Animation = TweenInfo.new(0.1)
 
 --==============================================================
--- BASIC UTILITIES
+-- UTILITIES
 --==============================================================
 
 function Core:Warn(...)
@@ -189,7 +189,8 @@ function Core:Tween(Instance, Properties, TweenInfoValue, NoAnimation)
 end
 
 function Core:ApplyAnimations(Instance, AnimationType, Target)
-	local AnimationConfig = self.Animations[AnimationType]
+	local AnimationConfig =
+		self.Animations[AnimationType]
 
 	if not AnimationConfig then
 		self:Warn(
@@ -267,15 +268,11 @@ function Core:HeaderAnimate(
 		UIListLayout.AbsoluteContentSize
 
 	if UIPadding then
-		local Top =
-			UIPadding.PaddingTop.Offset
-
-		local Bottom =
-			UIPadding.PaddingBottom.Offset
-
 		ContentSize = Vector2.new(
 			ContentSize.X,
-			ContentSize.Y + Top + Bottom
+			ContentSize.Y
+				+ UIPadding.PaddingTop.Offset
+				+ UIPadding.PaddingBottom.Offset
 		)
 	end
 
@@ -283,27 +280,30 @@ function Core:HeaderAnimate(
 		Enum.AutomaticSize.None
 
 	if not Open then
-		Container.Size = UDim2.new(
-			1,
-			-10,
-			0,
-			ContentSize.Y
-		)
-	end
-
-	local Tween = self:Tween(
-		Container,
-		{
-			Size = UDim2.new(
+		Container.Size =
+			UDim2.new(
 				1,
 				-10,
 				0,
-				Open and ContentSize.Y or 0
-			),
+				ContentSize.Y
+			)
+	end
 
-			Visible = Open,
-		}
-	)
+	local Tween =
+		self:Tween(
+			Container,
+			{
+				Size =
+					UDim2.new(
+						1,
+						-10,
+						0,
+						Open and ContentSize.Y or 0
+					),
+
+				Visible = Open,
+			}
+		)
 
 	Tween.Completed:Connect(function()
 		if not Open then
@@ -324,7 +324,7 @@ function Core:HeaderAnimate(
 end
 
 --==============================================================
--- ADDITIONAL STYLES
+-- STYLES
 --==============================================================
 
 Core.AdditionalStyles = {
@@ -338,12 +338,9 @@ Core.AdditionalStyles = {
 			return
 		end
 
-		local BorderThickness =
-			Class.BorderThickness
-
-		if BorderThickness then
+		if Class.BorderThickness then
 			Outline.Thickness =
-				BorderThickness
+				Class.BorderThickness
 		end
 
 		Outline.Enabled = Value
@@ -353,12 +350,10 @@ Core.AdditionalStyles = {
 		Name = "Ratio",
 	}] = function(GuiObject, Value, Class)
 		local RatioAxis =
-			Class.RatioAxis
-			or "Height"
+			Class.RatioAxis or "Height"
 
 		local AspectRatio =
-			Class.Ratio
-			or 4 / 3
+			Class.Ratio or 4 / 3
 
 		local AspectType =
 			Class.AspectType
@@ -432,7 +427,7 @@ Core.AdditionalStyles = {
 			"NoGradientAll",
 		},
 		Recursive = true,
-	}] = function(GuiObject, Value, Class)
+	}] = function(GuiObject, Value)
 		local Gradient =
 			GuiObject:FindFirstChildOfClass(
 				"UIGradient"
@@ -442,8 +437,7 @@ Core.AdditionalStyles = {
 			return
 		end
 
-		Gradient.Enabled =
-			not Value
+		Gradient.Enabled = not Value
 	end,
 
 	[{
@@ -451,16 +445,12 @@ Core.AdditionalStyles = {
 	}] = function(GuiObject, Value, Class)
 		function Class:SetCallback(NewCallback)
 			Class.Callback = NewCallback
-
 			return Class
 		end
 
 		function Class:FireCallback(...)
-			local Callback =
-				Class.Callback
-
-			if Callback then
-				return Callback(
+			if Class.Callback then
+				return Class.Callback(
 					GuiObject,
 					...
 				)
@@ -476,10 +466,6 @@ Core.AdditionalStyles = {
 		end
 	end,
 }
-
---==============================================================
--- STYLE SYSTEM
---==============================================================
 
 function Core:ApplyColors(
 	ColorOverwrites,
@@ -513,14 +499,12 @@ function Core:ApplyColors(
 					)
 			end
 
-			if not Element then
-				continue
+			if Element then
+				self:ApplyColors(
+					Value,
+					Element
+				)
 			end
-
-			self:ApplyColors(
-				Value,
-				Element
-			)
 
 			continue
 		end
@@ -536,7 +520,6 @@ function Core:CheckStyles(
 	Class,
 	Colors
 )
-	-- Additional styles
 	for Info, Callback in next, self.AdditionalStyles do
 		local Value =
 			Class[Info.Name]
@@ -606,22 +589,23 @@ function Core:MergeMetatables(Class, Instance)
 	local Metadata = {}
 
 	Metadata.__index = function(_, Key)
-		local Success, Value = pcall(function()
-			local Result = Instance[Key]
+		local Success, Value =
+			pcall(function()
+				local Result = Instance[Key]
 
-			if typeof(Result) == "function" then
-				return function(...)
-					return Result(
-						Instance,
-						...
-					)
+				if typeof(Result) == "function" then
+					return function(...)
+						return Result(
+							Instance,
+							...
+						)
+					end
 				end
-			end
 
-			return Result
-		end)
+				return Result
+			end)
 
-		if Success and Value ~= nil then
+		if Success then
 			return Value
 		end
 
@@ -641,10 +625,7 @@ function Core:MergeMetatables(Class, Instance)
 		end
 	end
 
-	return setmetatable(
-		{},
-		Metadata
-	)
+	return setmetatable({}, Metadata)
 end
 
 --==============================================================
@@ -653,7 +634,6 @@ end
 
 function Core:ConnectHover(Config)
 	local Parent = Config.Parent
-
 	local Connections = {}
 
 	Config.Hovering = false
@@ -696,7 +676,7 @@ function Core:ConnectHover(Config)
 end
 
 --==============================================================
--- WINDOW SELECTION EFFECT
+-- WINDOW SELECT
 --==============================================================
 
 function Core:ApplyWindowSelectEffect(
