@@ -1,0 +1,1 @@
+-- https://github.com/Altis-DEV/Altis-UiLibrary/blob/main/src/Core.lua
