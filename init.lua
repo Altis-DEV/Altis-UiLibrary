@@ -5,14 +5,22 @@ local BASE_URL =
 
 local Cache = {}
 
+--==============================================================
+-- MODULE LOADER
+--==============================================================
+
 local function Load(Path)
 	if Cache[Path] ~= nil then
 		return Cache[Path]
 	end
 
-	local Source = game:HttpGet(BASE_URL .. Path)
+	local Source =
+		game:HttpGet(
+			BASE_URL .. Path
+		)
 
-	local Chunk, CompileError = loadstring(Source)
+	local Chunk, CompileError =
+		loadstring(Source)
 
 	assert(
 		Chunk,
@@ -22,7 +30,8 @@ local function Load(Path)
 			.. tostring(CompileError)
 	)
 
-	local Success, Result = pcall(Chunk)
+	local Success, Result =
+		pcall(Chunk)
 
 	assert(
 		Success,
@@ -32,7 +41,8 @@ local function Load(Path)
 			.. tostring(Result)
 	)
 
-	Cache[Path] = Result
+	Cache[Path] =
+		Result
 
 	return Result
 end
@@ -41,23 +51,31 @@ end
 -- CORE
 --==============================================================
 
-local Core = Load("src/Core.lua")
+local Core =
+	Load("src/Core.lua")
 
 --==============================================================
--- MAIN OBJECT
+-- IMGUI
 --==============================================================
 
 local ImGui = {
 	Core = Core,
+
 	Windows = {},
 
 	Load = Load,
 
-	Animations = Core.Animations,
-	Animation = Core.Animation,
+	Animations =
+		Core.Animations,
 
-	UIAssetId = Core.UIAssetId,
-	NoWarnings = Core.NoWarnings,
+	Animation =
+		Core.Animation,
+
+	UIAssetId =
+		Core.UIAssetId,
+
+	NoWarnings =
+		Core.NoWarnings,
 }
 
 --==============================================================
@@ -132,10 +150,13 @@ end
 --==============================================================
 
 function ImGui:FetchUI()
-	local CacheName = "DepsoImGui"
+	local CacheName =
+		"DepsoImGui"
 
 	if _G[CacheName] then
-		self:Warn("Prefabs loaded from Cache")
+		self:Warn(
+			"Prefabs loaded from Cache"
+		)
 
 		return _G[CacheName]
 	end
@@ -143,16 +164,21 @@ function ImGui:FetchUI()
 	local UI
 
 	if not Core.IsStudio then
-		UI = game:GetObjects(
-			self.UIAssetId
-		)[1]
+		UI =
+			game:GetObjects(
+				self.UIAssetId
+			)[1]
 	else
-		local UIName = "DepsoImGui"
+		local UIName =
+			"DepsoImGui"
 
 		UI =
-			Core.PlayerGui:FindFirstChild(UIName)
-
-			or script:FindFirstChild(UIName)
+			Core.PlayerGui:FindFirstChild(
+				UIName
+			)
+			or script:FindFirstChild(
+				UIName
+			)
 	end
 
 	assert(
@@ -160,19 +186,23 @@ function ImGui:FetchUI()
 		"ImGui: Failed to load DepsoImGui prefab"
 	)
 
-	_G[CacheName] = UI
+	_G[CacheName] =
+		UI
 
 	return UI
 end
 
-local UI = ImGui:FetchUI()
+local UI =
+	ImGui:FetchUI()
 
 local Prefabs =
 	UI:WaitForChild("Prefabs")
 
-Prefabs.Visible = false
+Prefabs.Visible =
+	false
 
-ImGui.Prefabs = Prefabs
+ImGui.Prefabs =
+	Prefabs
 
 --==============================================================
 -- SCREEN GUI
@@ -183,27 +213,30 @@ local GuiParent =
 	and Core.PlayerGui
 	or Core.Services.CoreGui
 
-ImGui.ScreenGui = ImGui:CreateInstance(
-	"ScreenGui",
-	GuiParent,
-	{
-		DisplayOrder = 9999,
-		ResetOnSpawn = false,
-	}
-)
+ImGui.ScreenGui =
+	ImGui:CreateInstance(
+		"ScreenGui",
+		GuiParent,
+		{
+			DisplayOrder = 9999,
+			ResetOnSpawn = false,
+		}
+	)
 
-ImGui.FullScreenGui = ImGui:CreateInstance(
-	"ScreenGui",
-	GuiParent,
-	{
-		DisplayOrder = 99999,
-		ResetOnSpawn = false,
-		ScreenInsets = Enum.ScreenInsets.None,
-	}
-)
+ImGui.FullScreenGui =
+	ImGui:CreateInstance(
+		"ScreenGui",
+		GuiParent,
+		{
+			DisplayOrder = 99999,
+			ResetOnSpawn = false,
+			ScreenInsets =
+				Enum.ScreenInsets.None,
+		}
+	)
 
 --==============================================================
--- WINDOW MODULE
+-- WINDOW
 --==============================================================
 
 local WindowModule =
