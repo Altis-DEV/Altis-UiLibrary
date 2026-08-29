@@ -23,8 +23,7 @@ local ReGui = {}
 --==================================================
 
 local BASE_URL =
-    "https://raw.githubusercontent.com/USERNAME/REPO/main/"
-
+    "https://raw.githubusercontent.com/Altis-DEV/Altis-UiLibrary/main/"
 --==================================================
 -- Internal loader
 --==================================================
