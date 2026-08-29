@@ -40,19 +40,21 @@ function Methods.GetContentHeight(Data)
 end
 
 --==============================================================
--- VIEWPORT
+-- VIEWPORT HEIGHT
 --==============================================================
 
 function Methods.GetViewportHeight(Data)
-	if not Data.Body then
+	local Body = Data.Body
+
+	if not Body then
 		return 0
 	end
 
-	return Data.Body.AbsoluteSize.Y
+	return Body.AbsoluteWindowSize.Y
 end
 
 --==============================================================
--- UPDATE CONTENT SIZE
+-- CONTENT SIZE
 --==============================================================
 
 function Methods.UpdateContentSize(Data)
@@ -68,23 +70,20 @@ function Methods.UpdateContentSize(Data)
 	local ViewportHeight =
 		Methods.GetViewportHeight(Data)
 
-	local Height =
-		math.max(
-			ContentHeight,
-			ViewportHeight
-		)
-
 	Content.Size =
 		UDim2.new(
 			1,
 			0,
 			0,
-			Height
+			math.max(
+				ContentHeight,
+				ViewportHeight
+			)
 		)
 end
 
 --==============================================================
--- UPDATE SCROLL
+-- SCROLL
 --==============================================================
 
 function Methods.UpdateScroll(Data)
@@ -110,67 +109,58 @@ function Methods.UpdateScroll(Data)
 		return
 	end
 
-	local CanvasHeight =
-		math.max(
-			ContentHeight,
-			ViewportHeight
-		)
-
+	-- CanvasSize determines the scrollable area.
 	Body.CanvasSize =
-		UDim2.new(
+		UDim2.fromOffset(
 			0,
-			0,
-			0,
-			CanvasHeight
+			math.max(
+				ContentHeight,
+				ViewportHeight
+			)
 		)
 
-	local CanScroll =
+	-- Body is the actual scrolling container.
+	Body.ScrollingEnabled = true
+
+	Body.ScrollingDirection =
+		Enum.ScrollingDirection.Y
+
+	Body.VerticalScrollBarInset =
+		Enum.ScrollBarInset.ScrollBar
+
+	Body.HorizontalScrollBarInset =
+		Enum.ScrollBarInset.None
+
+	Body.ScrollBarThickness =
+		Data.ScrollBarThickness
+
+	-- Roblox automatically adjusts the scrollbar thumb size
+	-- according to CanvasSize and the visible viewport.
+	Data.NeedsScroll =
 		ContentHeight
 		> ViewportHeight + 1
 
-	Data.NeedsScroll = CanScroll
+	-- Keep the scroll position valid if the content shrinks.
+	local Maximum =
+		math.max(
+			0,
+			Body.AbsoluteCanvasSize.Y
+			- Body.AbsoluteWindowSize.Y
+		)
 
-	if CanScroll then
-		Body.ScrollingEnabled = true
-
-		Body.ScrollBarThickness =
-			Data.ScrollBarThickness
-
-		Body.ScrollingDirection =
-			Enum.ScrollingDirection.Y
-
-		Body.VerticalScrollBarInset =
-			Enum.ScrollBarInset.ScrollBar
-
-		Body.HorizontalScrollBarInset =
-			Enum.ScrollBarInset.None
-
-		if Data.ParentWindowConfig
-			and Data.ParentWindowConfig.RegisterInteraction then
-
-			Data.ParentWindowConfig:RegisterInteraction(
-				Body
+	if Body.CanvasPosition.Y > Maximum then
+		Body.CanvasPosition =
+			Vector2.new(
+				0,
+				Maximum
 			)
-		end
-	else
-		Body.ScrollingEnabled = false
-		Body.ScrollBarThickness = 0
-		Body.CanvasPosition = Vector2.zero
-
-		if Data.ParentWindowConfig
-			and Data.ParentWindowConfig.UnregisterInteraction then
-
-			Data.ParentWindowConfig:UnregisterInteraction(
-				Body
-			)
-		end
 	end
 
 	return Data
 end
 
 --==============================================================
--- CONTENT SIZE
+-- CONTENT SIZE API
 --==============================================================
 
 function Methods.GetContentSize(Data)
@@ -187,10 +177,30 @@ end
 
 function Methods.SetVisible(Data, Visible)
 	if Data.Content then
-		Data.Content.Visible = Visible == true
+		Data.Content.Visible =
+			Visible == true
 	end
 
 	return Data
+end
+
+--==============================================================
+-- SELECT
+--==============================================================
+
+function Methods.Select(Context, Config)
+	if not Config then
+		return Config
+	end
+
+	local Window =
+		Config.ParentWindow
+
+	if Window and Window.ShowTab then
+		Window:ShowTab(Config)
+	end
+
+	return Config
 end
 
 --==============================================================
@@ -272,31 +282,16 @@ function Methods.SetScrollPosition(Data, Position)
 	return Data
 end
 
+--==============================================================
+-- GET SCROLL POSITION
+--==============================================================
+
 function Methods.GetScrollPosition(Data)
 	if not Data.Body then
 		return Vector2.zero
 	end
 
 	return Data.Body.CanvasPosition
-end
-
---==============================================================
--- SELECT
---==============================================================
-
-function Methods.Select(Context, Config)
-	if not Config then
-		return Config
-	end
-
-	local Window =
-		Config.ParentWindow
-
-	if Window and Window.ShowTab then
-		Window:ShowTab(Config)
-	end
-
-	return Config
 end
 
 --==============================================================
@@ -436,11 +431,7 @@ function Methods.Attach(Context, Config, Data)
 
 	Data.Content:GetPropertyChangedSignal(
 		"AbsoluteSize"
-	):Connect(function()
-		if Data.Active then
-			Methods.UpdateScroll(Data)
-		end
-	end)
+	):Connect(Update)
 
 	Data.Body:GetPropertyChangedSignal(
 		"AbsoluteSize"
