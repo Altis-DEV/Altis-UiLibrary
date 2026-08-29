@@ -2,50 +2,79 @@
 
 local Methods = {}
 
+--==============================================================
+-- HEADER SIZE
+--==============================================================
+
 function Methods.GetHeaderSizeY(Data)
-	local Toolbar = Data.ToolBar
+	local ToolBar = Data.ToolBar
 	local TitleBar = Data.TitleBar
 
-	local ToolbarY = Toolbar.Visible and Toolbar.AbsoluteSize.Y or 0
-	local TitleBarY = TitleBar.Visible and TitleBar.AbsoluteSize.Y or 0
+	local ToolbarY =
+		ToolBar.Visible
+		and ToolBar.AbsoluteSize.Y
+		or 0
 
-	return ToolbarY + TitleBarY
+	local TitlebarY =
+		TitleBar.Visible
+		and TitleBar.AbsoluteSize.Y
+		or 0
+
+	return ToolbarY + TitlebarY
 end
 
-function Methods.UpdateBody(Data)
-	local HeaderSizeY = Methods.GetHeaderSizeY(Data)
+--==============================================================
+-- BODY SIZE
+--==============================================================
 
-	Data.Body.Size = UDim2.new(
-		1,
-		0,
-		1,
-		-HeaderSizeY
-	)
+function Methods.UpdateBody(Data)
+	local HeaderSizeY =
+		Methods.GetHeaderSizeY(Data)
+
+	Data.Body.Size =
+		UDim2.new(
+			1,
+			0,
+			1,
+			-HeaderSizeY
+		)
 
 	return Data
 end
 
+--==============================================================
+-- ATTACH
+--==============================================================
+
 function Methods.Attach(Context, Config, Data)
 	local ImGui = Context.ImGui
 
-	--==============================================================
+	--============================================================
 	-- STATE
-	--==============================================================
+	--============================================================
 
-	Config.Open = Config.Open ~= false
-	Data.DragEnabled = Config.NoDrag ~= true
+	Config.Open =
+		Config.Open ~= false
+
+	Data.DragEnabled =
+		Config.NoDrag ~= true
+
 	Data.Destroyed = false
 
-	--==============================================================
+	Data.Tabs =
+		Data.Tabs or {}
+
+	--============================================================
 	-- CLOSE
-	--==============================================================
+	--============================================================
 
 	function Config:Close()
 		if Data.Destroyed then
 			return self
 		end
 
-		local Callback = self.CloseCallback
+		local Callback =
+			self.CloseCallback
 
 		self:SetVisible(false)
 
@@ -56,9 +85,9 @@ function Methods.Attach(Context, Config, Data)
 		return self
 	end
 
-	--==============================================================
+	--============================================================
 	-- REMOVE
-	--==============================================================
+	--============================================================
 
 	function Config:Remove()
 		if Data.Destroyed then
@@ -67,60 +96,61 @@ function Methods.Attach(Context, Config, Data)
 
 		Data.Destroyed = true
 
-		if ImGui.Windows[Data.Window] then
-			ImGui.Windows[Data.Window] = nil
-		end
+		ImGui.Windows[Data.Window] = nil
 
 		Data.Window:Destroy()
 
 		return self
 	end
 
-	--==============================================================
+	--============================================================
 	-- VISIBLE
-	--==============================================================
+	--============================================================
 
 	function Config:SetVisible(Visible)
 		if Data.Destroyed then
 			return self
 		end
 
-		Data.Window.Visible = Visible == true
+		Data.Window.Visible =
+			Visible == true
 
 		return self
 	end
 
-	--==============================================================
+	--============================================================
 	-- TITLE
-	--==============================================================
+	--============================================================
 
 	function Config:SetTitle(Text)
 		if Data.Destroyed then
 			return self
 		end
 
-		Data.TitleBar.Left.Title.Text = tostring(Text)
+		Data.TitleBar.Left.Title.Text =
+			tostring(Text)
 
 		return self
 	end
 
-	--==============================================================
+	--============================================================
 	-- POSITION
-	--==============================================================
+	--============================================================
 
 	function Config:SetPosition(Position)
 		if Data.Destroyed then
 			return self
 		end
 
-		Data.Window.Position = Position
+		Data.Window.Position =
+			Position
 
 		return self
 	end
 
-	--==============================================================
+	--============================================================
 	-- SIZE
-	--==============================================================
+	--============================================================
 
 	function Config:SetSize(Size)
 		if Data.Destroyed then
@@ -128,21 +158,28 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		if typeof(Size) == "Vector2" then
-			Size = UDim2.fromOffset(Size.X, Size.Y)
+			Size =
+				UDim2.fromOffset(
+					Size.X,
+					Size.Y
+				)
 		end
 
 		if typeof(Size) ~= "UDim2" then
 			return self
 		end
 
-		local HeaderSizeY = Methods.GetHeaderSizeY(Data)
+		local HeaderSizeY =
+			Methods.GetHeaderSizeY(Data)
 
-		local NewSize = UDim2.new(
-			Size.X.Scale,
-			Size.X.Offset,
-			Size.Y.Scale,
-			Size.Y.Offset + HeaderSizeY
-		)
+		local NewSize =
+			UDim2.new(
+				Size.X.Scale,
+				Size.X.Offset,
+
+				Size.Y.Scale,
+				Size.Y.Offset + HeaderSizeY
+			)
 
 		self.Size = NewSize
 		Data.Window.Size = NewSize
@@ -150,9 +187,9 @@ function Methods.Attach(Context, Config, Data)
 		return self
 	end
 
-	--==============================================================
-	-- OPEN / CLOSE
-	--==============================================================
+	--============================================================
+	-- OPEN
+	--============================================================
 
 	function Config:SetOpen(Open, NoAnimation)
 		if Data.Destroyed then
@@ -160,10 +197,14 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		Open = Open == true
+
 		self.Open = Open
 
-		local WindowSize = Data.Window.AbsoluteSize
-		local TitleBarSize = Data.TitleBar.AbsoluteSize
+		local WindowSize =
+			Data.Window.AbsoluteSize
+
+		local TitleBarSize =
+			Data.TitleBar.AbsoluteSize
 
 		ImGui:HeaderAnimate(
 			Data.TitleBar,
@@ -176,8 +217,11 @@ function Methods.Attach(Context, Config, Data)
 		ImGui:Tween(
 			Data.Resize,
 			{
-				TextTransparency = Open and 0.6 or 1,
-				Interactable = Open
+				TextTransparency =
+					Open and 0.6 or 1,
+
+				Interactable =
+					Open,
 			},
 			nil,
 			NoAnimation
@@ -186,12 +230,13 @@ function Methods.Attach(Context, Config, Data)
 		ImGui:Tween(
 			Data.Window,
 			{
-				Size = Open
+				Size =
+					Open
 					and self.Size
 					or UDim2.fromOffset(
 						WindowSize.X,
 						TitleBarSize.Y
-					)
+					),
 			},
 			nil,
 			NoAnimation
@@ -200,7 +245,7 @@ function Methods.Attach(Context, Config, Data)
 		ImGui:Tween(
 			Data.Body,
 			{
-				Visible = Open
+				Visible = Open,
 			},
 			nil,
 			NoAnimation
@@ -209,82 +254,129 @@ function Methods.Attach(Context, Config, Data)
 		return self
 	end
 
-	--==============================================================
-	-- TAB
-	--==============================================================
+	--============================================================
+	-- CREATE TAB
+	--============================================================
 
 	function Config:CreateTab(TabConfig)
-		TabConfig = TabConfig or {}
-
-		assert(
-			Context.Load,
-			"ImGui Window: Context.Load is missing"
-		)
-
-		local TabModule = Context.Load(
-			"src/Tab/init.lua"
-		)
+		local TabModule =
+			Context.Load(
+				"src/Tab/init.lua"
+			)
 
 		return TabModule.new(
 			Context,
 			self,
 			Data,
-			TabConfig
+			TabConfig or {}
 		)
 	end
 
-	--==============================================================
+	--============================================================
 	-- SHOW TAB
-	--==============================================================
+	--============================================================
 
-	function Config:ShowTab(TabClass)
+	function Config:ShowTab(TabConfig)
 		if Data.Destroyed then
 			return self
 		end
 
-		if not TabClass or not TabClass.Content then
+		if not TabConfig
+			or not TabConfig.__TabData then
+
 			return self
 		end
 
-		local TargetPage = TabClass.Content
+		local TargetData =
+			TabConfig.__TabData
 
-		if not TargetPage.Visible
-			and not TabClass.NoAnimation then
+		--========================================================
+		-- DEACTIVATE OTHER TABS
+		--========================================================
 
-			TargetPage.Position = UDim2.fromOffset(0, 5)
-		end
+		for _, OtherConfig in next, Data.Tabs do
+			local OtherData =
+				OtherConfig.__TabData
 
-		for _, Page in next, Data.Body:GetChildren() do
-			if Page:IsA("GuiObject") then
-				Page.Visible = Page == TargetPage
+			if OtherData
+				and OtherData ~= TargetData then
+
+				OtherData.Active = false
+				OtherData.Content.Visible = false
 			end
 		end
 
-		ImGui:Tween(
-			TargetPage,
-			{
-				Position = UDim2.fromOffset(0, 0)
-			}
-		)
+		--========================================================
+		-- ACTIVATE TARGET
+		--========================================================
+
+		TargetData.Active = true
+		TargetData.Content.Visible = true
+
+		--========================================================
+		-- RESET BODY SCROLL
+		--========================================================
+
+		Data.Body.CanvasPosition =
+			Vector2.zero
+
+		--========================================================
+		-- PAGE ANIMATION
+		--========================================================
+
+		if not TabConfig.NoAnimation then
+			TargetData.Content.Position =
+				UDim2.fromOffset(0, 5)
+
+			ImGui:Tween(
+				TargetData.Content,
+				{
+					Position =
+						UDim2.fromOffset(0, 0),
+				}
+			)
+		end
+
+		--========================================================
+		-- UPDATE SCROLL
+		--========================================================
+
+		local UpdateScroll =
+			TargetData.Context
+			and TargetData.Context.Load
+
+		local TabMethods =
+			UpdateScroll
+			and TargetData.Context.Load(
+				"src/Tab/method.lua"
+			)
+
+		if TabMethods then
+			TabMethods.UpdateScroll(
+				TargetData
+			)
+		end
 
 		return self
 	end
 
-	--==============================================================
+	--============================================================
 	-- CENTER
-	--==============================================================
+	--============================================================
 
 	function Config:Center()
 		if Data.Destroyed then
 			return self
 		end
 
-		local Size = Data.Window.AbsoluteSize
+		local Size =
+			Data.Window.AbsoluteSize
 
 		self:SetPosition(
 			UDim2.new(
 				0.5,
 				-Size.X / 2,
+
 				0.5,
 				-Size.Y / 2
 			)
@@ -293,30 +385,34 @@ function Methods.Attach(Context, Config, Data)
 		return self
 	end
 
-	--==============================================================
-	-- WINDOW PROPERTIES
-	--==============================================================
+	--============================================================
+	-- PROPERTIES
+	--============================================================
 
 	function Config:SetProperties(Properties)
 		if Data.Destroyed then
 			return self
 		end
 
-		for Key, Value in next, Properties or {} do
+		for Key, Value in next,
+			Properties or {} do
+
 			pcall(function()
-				Data.Window[Key] = Value
+				Data.Window[Key] =
+					Value
 			end)
 		end
 
 		return self
 	end
 
-	--==============================================================
-	-- DRAG CONTROL
-	--==============================================================
+	--============================================================
+	-- DRAG
+	--============================================================
 
 	function Config:SetDragEnabled(Enabled)
-		Data.DragEnabled = Enabled == true
+		Data.DragEnabled =
+			Enabled == true
 
 		return self
 	end
@@ -325,51 +421,80 @@ function Methods.Attach(Context, Config, Data)
 		return Data.DragEnabled
 	end
 
-	--==============================================================
-	-- INTERACTION REGISTRATION
-	--
-	-- Controls such as Slider, TextBox and ResizeGrab can register
-	-- themselves here. A touch beginning on a registered object will
-	-- not begin a Window drag.
-	--==============================================================
+	--============================================================
+	-- REGISTER INTERACTION
+	--============================================================
 
 	function Config:RegisterInteraction(GuiObject)
 		if Data.Destroyed then
 			return self
 		end
 
-		Data:RegisterInteraction(GuiObject)
+		Data:RegisterInteraction(
+			GuiObject
+		)
 
 		return self
 	end
 
-	--==============================================================
+	--============================================================
+	-- UNREGISTER INTERACTION
+	--============================================================
+
+	function Config:UnregisterInteraction(GuiObject)
+		if not GuiObject then
+			return self
+		end
+
+		for Index = #Data.Interactions, 1, -1 do
+			if Data.Interactions[Index]
+				== GuiObject then
+
+				table.remove(
+					Data.Interactions,
+					Index
+				)
+			end
+		end
+
+		return self
+	end
+
+	--============================================================
 	-- CLOSE BUTTON
-	--==============================================================
+	--============================================================
 
-	local CloseButton = Data.TitleBar.Close
+	local CloseButton =
+		Data.TitleBar.Close
 
-	CloseButton.Visible = Config.NoClose ~= true
+	CloseButton.Visible =
+		Config.NoClose ~= true
 
-	Data:RegisterInteraction(CloseButton)
+	Data:RegisterInteraction(
+		CloseButton
+	)
 
-	CloseButton.Activated:Connect(function()
-		Config:Close()
-	end)
+	CloseButton.Activated:Connect(
+		function()
+			Config:Close()
+		end
+	)
 
-	--==============================================================
-	-- COLLAPSE BUTTON
-	--==============================================================
+	--============================================================
+	-- COLLAPSE
+	--============================================================
 
-	Data.Toggle.ToggleButton.Activated:Connect(function()
-		local Open = not Config.Open
+	Data.Toggle.ToggleButton.Activated:Connect(
+		function()
+			Config:SetOpen(
+				not Config.Open
+			)
+		end
+	)
 
-		Config:SetOpen(Open)
-	end)
-
-	--==============================================================
+	--============================================================
 	-- SELECT EFFECT
-	--==============================================================
+	--============================================================
 
 	if not Config.NoSelectEffect then
 		ImGui:ApplyWindowSelectEffect(
