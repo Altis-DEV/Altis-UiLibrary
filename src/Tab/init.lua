@@ -28,7 +28,7 @@ function Tab.new(
 		Config.Name or ""
 
 	--==============================================================
-	-- TOOLBAR SCROLL
+	-- TAB BAR
 	--==============================================================
 
 	local TabBar =
@@ -36,24 +36,39 @@ function Tab.new(
 
 	if not TabBar then
 		TabBar =
-			Instance.new("ScrollingFrame")
+			Context.Prefabs.ScrollBox:Clone()
 
-		TabBar.Name = "TabBar"
+		TabBar.Name =
+			"TabBar"
 
-		TabBar.BackgroundTransparency = 1
-		TabBar.BorderSizePixel = 0
+		TabBar.BackgroundTransparency =
+			1
+
+		TabBar.BorderSizePixel =
+			0
 
 		TabBar.Position =
-			UDim2.fromScale(0, 0)
+			UDim2.fromScale(
+				0,
+				0
+			)
 
 		TabBar.Size =
-			UDim2.fromScale(1, 1)
+			UDim2.new(
+				1,
+				0,
+				0,
+				WindowData.ToolBarHeight
+			)
 
 		TabBar.CanvasPosition =
 			Vector2.zero
 
 		TabBar.CanvasSize =
-			UDim2.fromOffset(0, 0)
+			UDim2.fromOffset(
+				0,
+				0
+			)
 
 		TabBar.AutomaticCanvasSize =
 			Enum.AutomaticSize.None
@@ -65,20 +80,28 @@ function Tab.new(
 			true
 
 		TabBar.HorizontalScrollBarInset =
-			Enum.ScrollBarInset.ScrollBar
+			Enum.ScrollBarInset.None
 
 		TabBar.VerticalScrollBarInset =
 			Enum.ScrollBarInset.None
 
-		TabBar.ScrollBarThickness = 4
+		TabBar.ScrollBarThickness =
+			0
 
-		TabBar.ClipsDescendants = true
+		TabBar.ClipsDescendants =
+			true
 
 		TabBar.Parent =
 			WindowData.ToolBar
 
+		--==========================================================
+		-- TAB LAYOUT
+		--==========================================================
+
 		local Layout =
-			Instance.new("UIListLayout")
+			Instance.new(
+				"UIListLayout"
+			)
 
 		Layout.FillDirection =
 			Enum.FillDirection.Horizontal
@@ -93,7 +116,10 @@ function Tab.new(
 			Enum.SortOrder.LayoutOrder
 
 		Layout.Padding =
-			UDim.new(0, 4)
+			UDim.new(
+				0,
+				4
+			)
 
 		Layout.Parent =
 			TabBar
@@ -104,16 +130,13 @@ function Tab.new(
 		WindowData.TabBarLayout =
 			Layout
 
-		-- Original TabButton remains only as a prefab.
+		-- Original button is only a template.
 		WindowData.ToolBar.TabButton.Visible =
 			false
 
-		-- Toolbar touch should never start Window drag.
-		if WindowConfig.RegisterInteraction then
-			WindowConfig:RegisterInteraction(
-				TabBar
-			)
-		end
+		--==========================================================
+		-- UPDATE TOOLBAR SCROLL
+		--==========================================================
 
 		local function UpdateTabBar()
 			if not TabBar.Parent then
@@ -126,6 +149,10 @@ function Tab.new(
 			local ViewportWidth =
 				TabBar.AbsoluteSize.X
 
+			local CanScroll =
+				ContentWidth
+				> ViewportWidth + 1
+
 			TabBar.CanvasSize =
 				UDim2.fromOffset(
 					math.max(
@@ -135,12 +162,21 @@ function Tab.new(
 					0
 				)
 
-			if ContentWidth
-				> ViewportWidth + 1 then
+			if CanScroll then
+				TabBar.ScrollBarThickness =
+					Config.TabBarScrollBarThickness
+					or WindowConfig.TabBarScrollBarThickness
+					or 4
 
-				TabBar.ScrollBarThickness = 4
+				TabBar.HorizontalScrollBarInset =
+					Enum.ScrollBarInset.ScrollBar
 			else
-				TabBar.ScrollBarThickness = 0
+				TabBar.ScrollBarThickness =
+					0
+
+				TabBar.HorizontalScrollBarInset =
+					Enum.ScrollBarInset.None
+
 				TabBar.CanvasPosition =
 					Vector2.zero
 			end
@@ -148,11 +184,15 @@ function Tab.new(
 
 		Layout:GetPropertyChangedSignal(
 			"AbsoluteContentSize"
-		):Connect(UpdateTabBar)
+		):Connect(
+			UpdateTabBar
+		)
 
 		TabBar:GetPropertyChangedSignal(
 			"AbsoluteSize"
-		):Connect(UpdateTabBar)
+		):Connect(
+			UpdateTabBar
+		)
 
 		task.defer(
 			UpdateTabBar
@@ -204,7 +244,10 @@ function Tab.new(
 		false
 
 	Content.Position =
-		UDim2.fromOffset(0, 0)
+		UDim2.fromOffset(
+			0,
+			0
+		)
 
 	Content.Size =
 		UDim2.new(
@@ -229,14 +272,23 @@ function Tab.new(
 		ImGui = ImGui,
 		Core = Core,
 
-		ParentWindow = WindowData,
-		ParentWindowConfig = WindowConfig,
+		ParentWindow =
+			WindowData,
 
-		Button = Button,
-		Content = Content,
+		ParentWindowConfig =
+			WindowConfig,
 
-		Body = WindowData.Body,
-		TabBar = TabBar,
+		Button =
+			Button,
+
+		Content =
+			Content,
+
+		Body =
+			WindowData.Body,
+
+		TabBar =
+			TabBar,
 
 		UIListLayout =
 			Content:FindFirstChildOfClass(
@@ -279,14 +331,17 @@ function Tab.new(
 	Config.TabBar =
 		TabBar
 
-	-- Prevent Toolbar from starting Window drag.
+	-- Toolbar is owned by TabBar.
 	if WindowConfig.RegisterInteraction then
 		WindowConfig:RegisterInteraction(
-			Button
+			TabBar
 		)
 	end
 
-	-- Template is not a real tab.
+	--==============================================================
+	-- TEMPLATE
+	--==============================================================
+
 	Template.Visible =
 		false
 
@@ -301,7 +356,7 @@ function Tab.new(
 	)
 
 	--==============================================================
-	-- BODY UPDATE
+	-- BODY
 	--==============================================================
 
 	if WindowConfig.UpdateBody then
@@ -326,15 +381,17 @@ function Tab.new(
 	-- INITIAL SCROLL
 	--==============================================================
 
-	task.defer(function()
-		if Data.Destroyed then
-			return
-		end
+	task.defer(
+		function()
+			if Data.Destroyed then
+				return
+			end
 
-		if Config.UpdateScroll then
-			Config:UpdateScroll()
+			if Config.UpdateScroll then
+				Config:UpdateScroll()
+			end
 		end
-	end)
+	)
 
 	return Config
 end
