@@ -7,6 +7,7 @@ function Window.new(Context, WindowConfig)
 	assert(Context.ImGui, "Window.new: Context.ImGui is required")
 	assert(Context.Core, "Window.new: Context.Core is required")
 	assert(Context.Prefabs, "Window.new: Context.Prefabs is required")
+	assert(Context.Load, "Window.new: Context.Load is required")
 
 	WindowConfig = WindowConfig or {}
 
@@ -15,35 +16,61 @@ function Window.new(Context, WindowConfig)
 	local Prefabs = Context.Prefabs
 	local UIS = Core.Services.UserInputService
 
-	assert(
-		Context.Load,
-		"ImGui Window: Context.Load is missing"
-	)
-
 	local Methods = Context.Load(
 		"src/Window/method.lua"
 	)
 
 	--==============================================================
-	-- CREATE WINDOW
+	-- CREATE
 	--==============================================================
 
-	local Frame: Frame = Prefabs.Window:Clone()
+	local Frame =
+		Prefabs.Window:Clone()
 
-	Frame.Parent = ImGui.ScreenGui
+	Frame.Parent =
+		ImGui.ScreenGui
+
 	Frame.Visible = true
 
-	WindowConfig.Window = Frame
+	WindowConfig.Window =
+		Frame
 
-	local Content = Frame.Content
-	local Body = Content.Body
-
-	local TitleBar = Content.TitleBar
-	local ToolBar = Content.ToolBar
-	local Toggle = TitleBar.Left.Toggle
+	-- Always have a valid size.
+	WindowConfig.Size =
+		WindowConfig.Size
+		or Frame.Size
 
 	--==============================================================
-	-- WINDOW STATE
+	-- REFERENCES
+	--==============================================================
+
+	local Content =
+		Frame.Content
+
+	local Body =
+		Content.Body
+
+	local TitleBar =
+		Content.TitleBar
+
+	local ToolBar =
+		Content.ToolBar
+
+	local Toggle =
+		TitleBar.Left.Toggle
+
+	-- Body is the real vertical scrolling container.
+	Body.AutomaticCanvasSize =
+		Enum.AutomaticSize.None
+
+	Body.ScrollingDirection =
+		Enum.ScrollingDirection.Y
+
+	Body.HorizontalScrollBarInset =
+		Enum.ScrollBarInset.None
+
+	--==============================================================
+	-- DATA
 	--==============================================================
 
 	local Data = {
@@ -59,9 +86,11 @@ function Window.new(Context, WindowConfig)
 		ToolBar = ToolBar,
 		Toggle = Toggle,
 
-		Resize = Frame.ResizeGrab,
+		Resize =
+			Frame.ResizeGrab,
 
 		Interactions = {},
+		Tabs = {},
 
 		Dragging = false,
 		Resizing = false,
@@ -76,13 +105,22 @@ function Window.new(Context, WindowConfig)
 		ResizeStartSize = nil,
 
 		Destroyed = false,
-		DragEnabled = WindowConfig.NoDrag ~= true,
+
+		DragEnabled =
+			WindowConfig.NoDrag ~= true,
 	}
 
-	WindowConfig.__WindowData = Data
+	WindowConfig.__WindowData =
+		Data
+
+	-- IMPORTANT:
+	-- ActiveTab is initialized as a Lua table value.
+	-- This prevents MergeMetatables from trying to write
+	-- ActiveTab into the Roblox Frame.
+	WindowConfig.ActiveTab = false
 
 	--==============================================================
-	-- POINT HIT TEST
+	-- HIT TEST
 	--==============================================================
 
 	function Data:IsPointInside(GuiObject, Position)
@@ -94,17 +132,20 @@ function Window.new(Context, WindowConfig)
 			return false
 		end
 
-		local ObjectPosition = GuiObject.AbsolutePosition
-		local ObjectSize = GuiObject.AbsoluteSize
+		local AbsolutePosition =
+			GuiObject.AbsolutePosition
 
-		return Position.X >= ObjectPosition.X
-			and Position.X <= ObjectPosition.X + ObjectSize.X
-			and Position.Y >= ObjectPosition.Y
-			and Position.Y <= ObjectPosition.Y + ObjectSize.Y
+		local AbsoluteSize =
+			GuiObject.AbsoluteSize
+
+		return Position.X >= AbsolutePosition.X
+			and Position.X <= AbsolutePosition.X + AbsoluteSize.X
+			and Position.Y >= AbsolutePosition.Y
+			and Position.Y <= AbsolutePosition.Y + AbsoluteSize.Y
 	end
 
 	--==============================================================
-	-- INTERACTION REGISTRATION
+	-- INTERACTIONS
 	--==============================================================
 
 	function Data:RegisterInteraction(GuiObject)
@@ -112,27 +153,45 @@ function Window.new(Context, WindowConfig)
 			return GuiObject
 		end
 
-		if table.find(self.Interactions, GuiObject) then
+		if table.find(
+			self.Interactions,
+			GuiObject
+		) then
 			return GuiObject
 		end
 
-		table.insert(self.Interactions, GuiObject)
+		table.insert(
+			self.Interactions,
+			GuiObject
+		)
 
 		return GuiObject
 	end
 
 	function Data:IsInteractionPoint(Position)
-		for Index = #self.Interactions, 1, -1 do
-			local GuiObject = self.Interactions[Index]
+		for Index =
+			#self.Interactions,
+			1,
+			-1 do
+
+			local GuiObject =
+				self.Interactions[Index]
 
 			if not GuiObject
 				or not GuiObject.Parent then
 
-				table.remove(self.Interactions, Index)
+				table.remove(
+					self.Interactions,
+					Index
+				)
+
 				continue
 			end
 
-			if self:IsPointInside(GuiObject, Position) then
+			if self:IsPointInside(
+				GuiObject,
+				Position
+			) then
 				return true
 			end
 		end
@@ -145,27 +204,24 @@ function Window.new(Context, WindowConfig)
 	--==============================================================
 
 	function Data:BeginDrag(Input)
-		if self.Destroyed then
-			return
-		end
-
-		if not self.DragEnabled then
-			return
-		end
-
-		if self.Dragging or self.Resizing then
+		if self.Destroyed
+			or not self.DragEnabled
+			or self.Dragging
+			or self.Resizing then
 			return
 		end
 
 		self.Dragging = true
 		self.ActiveDragInput = Input
 
-		self.DragStart = Vector2.new(
-			Input.Position.X,
-			Input.Position.Y
-		)
+		self.DragStart =
+			Vector2.new(
+				Input.Position.X,
+				Input.Position.Y
+			)
 
-		self.DragStartPosition = self.Window.Position
+		self.DragStartPosition =
+			self.Window.Position
 	end
 
 	function Data:UpdateDrag(Position)
@@ -178,20 +234,24 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		local CurrentPosition = Vector2.new(
-			Position.X,
-			Position.Y
-		)
+		local CurrentPosition =
+			Vector2.new(
+				Position.X,
+				Position.Y
+			)
 
-		local Delta = CurrentPosition - self.DragStart
+		local Delta =
+			CurrentPosition
+			- self.DragStart
 
-		self.Window.Position = UDim2.new(
-			self.DragStartPosition.X.Scale,
-			self.DragStartPosition.X.Offset + Delta.X,
+		self.Window.Position =
+			UDim2.new(
+				self.DragStartPosition.X.Scale,
+				self.DragStartPosition.X.Offset + Delta.X,
 
-			self.DragStartPosition.Y.Scale,
-			self.DragStartPosition.Y.Offset + Delta.Y
-		)
+				self.DragStartPosition.Y.Scale,
+				self.DragStartPosition.Y.Offset + Delta.Y
+			)
 	end
 
 	function Data:EndDrag(Input)
@@ -199,7 +259,8 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		if Input and Input ~= self.ActiveDragInput then
+		if Input
+			and Input ~= self.ActiveDragInput then
 			return
 		end
 
@@ -219,23 +280,23 @@ function Window.new(Context, WindowConfig)
 		or Vector2.new(160, 90)
 
 	function Data:BeginResize(Input)
-		if self.Destroyed then
-			return
-		end
-
-		if self.Resizing or self.Dragging then
+		if self.Destroyed
+			or self.Resizing
+			or self.Dragging then
 			return
 		end
 
 		self.Resizing = true
 		self.ActiveResizeInput = Input
 
-		self.ResizeStart = Vector2.new(
-			Input.Position.X,
-			Input.Position.Y
-		)
+		self.ResizeStart =
+			Vector2.new(
+				Input.Position.X,
+				Input.Position.Y
+			)
 
-		self.ResizeStartSize = self.Window.AbsoluteSize
+		self.ResizeStartSize =
+			self.Window.AbsoluteSize
 	end
 
 	function Data:UpdateResize(Position)
@@ -248,28 +309,36 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		local CurrentPosition = Vector2.new(
-			Position.X,
-			Position.Y
-		)
-
-		local Delta = CurrentPosition - self.ResizeStart
-
-		local NewSize = UDim2.fromOffset(
-			math.max(
-				MinSize.X,
-				self.ResizeStartSize.X + Delta.X
-			),
-
-			math.max(
-				MinSize.Y,
-				self.ResizeStartSize.Y + Delta.Y
+		local CurrentPosition =
+			Vector2.new(
+				Position.X,
+				Position.Y
 			)
-		)
 
-		self.Window.Size = NewSize
+		local Delta =
+			CurrentPosition
+			- self.ResizeStart
 
-		WindowConfig.Size = NewSize
+		local NewSize =
+			UDim2.fromOffset(
+				math.max(
+					MinSize.X,
+					self.ResizeStartSize.X
+						+ Delta.X
+				),
+
+				math.max(
+					MinSize.Y,
+					self.ResizeStartSize.Y
+						+ Delta.Y
+				)
+			)
+
+		self.Window.Size =
+			NewSize
+
+		WindowConfig.Size =
+			NewSize
 	end
 
 	function Data:EndResize(Input)
@@ -277,7 +346,8 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		if Input and Input ~= self.ActiveResizeInput then
+		if Input
+			and Input ~= self.ActiveResizeInput then
 			return
 		end
 
@@ -289,7 +359,7 @@ function Window.new(Context, WindowConfig)
 	end
 
 	--==============================================================
-	-- WINDOW CONFIGURATION
+	-- VISUAL STATE
 	--==============================================================
 
 	TitleBar.Visible =
@@ -304,15 +374,18 @@ function Window.new(Context, WindowConfig)
 	Data.Resize.Visible =
 		WindowConfig.NoResize ~= true
 
-	-- Resize has priority over Window drag.
-	Data:RegisterInteraction(Data.Resize)
+	-- Resize corner always has priority.
+	Data:RegisterInteraction(
+		Data.Resize
+	)
 
 	--==============================================================
 	-- RESIZE INPUT
 	--==============================================================
 
 	Data.Resize.InputBegan:Connect(function(Input)
-		local InputType = Input.UserInputType
+		local InputType =
+			Input.UserInputType
 
 		if InputType ~= Enum.UserInputType.MouseButton1
 			and InputType ~= Enum.UserInputType.Touch then
@@ -324,16 +397,6 @@ function Window.new(Context, WindowConfig)
 
 	--==============================================================
 	-- GLOBAL INPUT
-	--
-	-- PC:
-	--   Window drag starts only on TitleBar.
-	--
-	-- MOBILE:
-	--   Window drag can start anywhere inside Window.
-	--
-	-- Input is captured through UserInputService because a touch
-	-- beginning on a child GuiObject does not reliably bubble to
-	-- Window.InputBegan.
 	--==============================================================
 
 	UIS.InputBegan:Connect(function(Input)
@@ -341,30 +404,37 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		local InputType = Input.UserInputType
+		local InputType =
+			Input.UserInputType
 
 		if InputType ~= Enum.UserInputType.MouseButton1
 			and InputType ~= Enum.UserInputType.Touch then
 			return
 		end
 
-		local Position = Vector2.new(
-			Input.Position.X,
-			Input.Position.Y
-		)
+		local Position =
+			Vector2.new(
+				Input.Position.X,
+				Input.Position.Y
+			)
 
-		-- Outside Window.
-		if not Data:IsPointInside(Frame, Position) then
+		if not Data:IsPointInside(
+			Frame,
+			Position
+		) then
 			return
 		end
 
-		-- Resize gets priority.
-		if Data:IsPointInside(Data.Resize, Position) then
+		if Data:IsPointInside(
+			Data.Resize,
+			Position
+		) then
 			return
 		end
 
-		-- Registered controls get priority.
-		if Data:IsInteractionPoint(Position) then
+		if Data:IsInteractionPoint(
+			Position
+		) then
 			return
 		end
 
@@ -372,20 +442,25 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		-- Mobile: any unregistered point inside Window.
+		-- Mobile:
+		-- Touch anywhere inside Window.
 		if InputType == Enum.UserInputType.Touch then
 			Data:BeginDrag(Input)
 			return
 		end
 
-		-- PC: only TitleBar.
-		if Data:IsPointInside(TitleBar, Position) then
+		-- Desktop:
+		-- Only TitleBar.
+		if Data:IsPointInside(
+			TitleBar,
+			Position
+		) then
 			Data:BeginDrag(Input)
 		end
 	end)
 
 	--==============================================================
-	-- GLOBAL INPUT CHANGED
+	-- INPUT CHANGED
 	--==============================================================
 
 	UIS.InputChanged:Connect(function(Input)
@@ -394,36 +469,54 @@ function Window.new(Context, WindowConfig)
 		end
 
 		if Data.Dragging then
-			if Input.UserInputType == Enum.UserInputType.MouseMovement then
-				Data:UpdateDrag(Input.Position)
+			if Input.UserInputType
+				== Enum.UserInputType.MouseMovement then
+
+				Data:UpdateDrag(
+					Input.Position
+				)
+
 				return
 			end
 
-			if Input.UserInputType == Enum.UserInputType.Touch
+			if Input.UserInputType
+				== Enum.UserInputType.Touch
 				and Input == Data.ActiveDragInput then
 
-				Data:UpdateDrag(Input.Position)
+				Data:UpdateDrag(
+					Input.Position
+				)
+
 				return
 			end
 		end
 
 		if Data.Resizing then
-			if Input.UserInputType == Enum.UserInputType.MouseMovement then
-				Data:UpdateResize(Input.Position)
+			if Input.UserInputType
+				== Enum.UserInputType.MouseMovement then
+
+				Data:UpdateResize(
+					Input.Position
+				)
+
 				return
 			end
 
-			if Input.UserInputType == Enum.UserInputType.Touch
+			if Input.UserInputType
+				== Enum.UserInputType.Touch
 				and Input == Data.ActiveResizeInput then
 
-				Data:UpdateResize(Input.Position)
+				Data:UpdateResize(
+					Input.Position
+				)
+
 				return
 			end
 		end
 	end)
 
 	--==============================================================
-	-- GLOBAL INPUT ENDED
+	-- INPUT ENDED
 	--==============================================================
 
 	UIS.InputEnded:Connect(function(Input)
@@ -453,18 +546,24 @@ function Window.new(Context, WindowConfig)
 	-- BODY SIZE
 	--==============================================================
 
-	WindowConfig.GetHeaderSizeY = function()
-		return Methods.GetHeaderSizeY(Data)
-	end
+	WindowConfig.GetHeaderSizeY =
+		function()
+			return Methods.GetHeaderSizeY(
+				Data
+			)
+		end
 
-	WindowConfig.UpdateBody = function()
-		return Methods.UpdateBody(Data)
-	end
+	WindowConfig.UpdateBody =
+		function()
+			return Methods.UpdateBody(
+				Data
+			)
+		end
 
 	WindowConfig.UpdateBody()
 
 	--==============================================================
-	-- METHODS
+	-- WINDOW METHODS
 	--==============================================================
 
 	Methods.Attach(
@@ -474,15 +573,19 @@ function Window.new(Context, WindowConfig)
 	)
 
 	--==============================================================
-	-- DEFAULT STATE
+	-- INITIAL STATE
 	--==============================================================
 
 	WindowConfig:SetTitle(
-		WindowConfig.Title or "Depso UI"
+		WindowConfig.Title
+		or "Depso UI"
 	)
 
 	if WindowConfig.Open == false then
-		WindowConfig:SetOpen(false, true)
+		WindowConfig:SetOpen(
+			false,
+			true
+		)
 	else
 		WindowConfig.Open = true
 	end
@@ -498,14 +601,11 @@ function Window.new(Context, WindowConfig)
 	)
 
 	--==============================================================
-	-- REGISTER WINDOW
+	-- REGISTER
 	--==============================================================
 
-	ImGui.Windows[Frame] = WindowConfig
-
-	--==============================================================
-	-- RETURN
-	--==============================================================
+	ImGui.Windows[Frame] =
+		WindowConfig
 
 	return ImGui:MergeMetatables(
 		WindowConfig,
