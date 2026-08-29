@@ -2,7 +2,12 @@
 
 local Tab = {}
 
-function Tab.new(Context, WindowConfig, WindowData, Config)
+function Tab.new(
+	Context,
+	WindowConfig,
+	WindowData,
+	Config
+)
 	assert(Context, "Tab.new: Context is required")
 	assert(Context.ImGui, "Tab.new: Context.ImGui is required")
 	assert(Context.Core, "Tab.new: Context.Core is required")
@@ -14,43 +19,50 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	local ImGui = Context.ImGui
 	local Core = Context.Core
 
-	local Methods = Context.Load(
-		"src/Tab/method.lua"
-	)
+	local Methods =
+		Context.Load(
+			"src/Tab/method.lua"
+		)
 
-	local Name = Config.Name or ""
+	local Name =
+		Config.Name or ""
 
 	--==============================================================
-	-- TAB BAR
+	-- TOOLBAR SCROLL
 	--==============================================================
 
-	local TabBar = WindowData.TabBar
+	local TabBar =
+		WindowData.TabBar
 
 	if not TabBar then
-		TabBar = Instance.new("ScrollingFrame")
+		TabBar =
+			Instance.new("ScrollingFrame")
 
 		TabBar.Name = "TabBar"
+
 		TabBar.BackgroundTransparency = 1
 		TabBar.BorderSizePixel = 0
 
-		TabBar.Size = UDim2.fromScale(1, 1)
-		TabBar.Position = UDim2.fromScale(0, 0)
+		TabBar.Position =
+			UDim2.fromScale(0, 0)
 
-		TabBar.CanvasPosition = Vector2.zero
-		TabBar.CanvasSize = UDim2.fromOffset(0, 0)
+		TabBar.Size =
+			UDim2.fromScale(1, 1)
+
+		TabBar.CanvasPosition =
+			Vector2.zero
+
+		TabBar.CanvasSize =
+			UDim2.fromOffset(0, 0)
 
 		TabBar.AutomaticCanvasSize =
-			Enum.AutomaticSize.X
+			Enum.AutomaticSize.None
 
 		TabBar.ScrollingDirection =
 			Enum.ScrollingDirection.X
 
-		TabBar.ScrollingEnabled = true
-
-		TabBar.ScrollBarThickness =
-			Config.TabBarScrollBarThickness
-			or WindowConfig.TabBarScrollBarThickness
-			or 4
+		TabBar.ScrollingEnabled =
+			true
 
 		TabBar.HorizontalScrollBarInset =
 			Enum.ScrollBarInset.ScrollBar
@@ -58,9 +70,9 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		TabBar.VerticalScrollBarInset =
 			Enum.ScrollBarInset.None
 
-		-- Correct Roblox property for touch elastic scrolling.
-		TabBar.ElasticBehavior =
-			Enum.ElasticBehavior.WhenScrollable
+		TabBar.ScrollBarThickness = 4
+
+		TabBar.ClipsDescendants = true
 
 		TabBar.Parent =
 			WindowData.ToolBar
@@ -83,21 +95,27 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		Layout.Padding =
 			UDim.new(0, 4)
 
-		Layout.Parent = TabBar
+		Layout.Parent =
+			TabBar
 
-		WindowData.TabBar = TabBar
-		WindowData.TabBarLayout = Layout
+		WindowData.TabBar =
+			TabBar
 
-		-- Original button is only a template.
-		WindowData.ToolBar.TabButton.Visible = false
+		WindowData.TabBarLayout =
+			Layout
 
-		-- Toolbar owns touch input.
+		-- Original TabButton remains only as a prefab.
+		WindowData.ToolBar.TabButton.Visible =
+			false
+
+		-- Toolbar touch should never start Window drag.
 		if WindowConfig.RegisterInteraction then
-			WindowConfig:RegisterInteraction(TabBar)
+			WindowConfig:RegisterInteraction(
+				TabBar
+			)
 		end
 
-		-- Keep horizontal canvas synchronized with content.
-		local function UpdateTabBarCanvas()
+		local function UpdateTabBar()
 			if not TabBar.Parent then
 				return
 			end
@@ -105,18 +123,40 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 			local ContentWidth =
 				Layout.AbsoluteContentSize.X
 
+			local ViewportWidth =
+				TabBar.AbsoluteSize.X
+
 			TabBar.CanvasSize =
 				UDim2.fromOffset(
-					ContentWidth + 4,
+					math.max(
+						ContentWidth,
+						ViewportWidth
+					),
 					0
 				)
+
+			if ContentWidth
+				> ViewportWidth + 1 then
+
+				TabBar.ScrollBarThickness = 4
+			else
+				TabBar.ScrollBarThickness = 0
+				TabBar.CanvasPosition =
+					Vector2.zero
+			end
 		end
 
 		Layout:GetPropertyChangedSignal(
 			"AbsoluteContentSize"
-		):Connect(UpdateTabBarCanvas)
+		):Connect(UpdateTabBar)
 
-		task.defer(UpdateTabBarCanvas)
+		TabBar:GetPropertyChangedSignal(
+			"AbsoluteSize"
+		):Connect(UpdateTabBar)
+
+		task.defer(
+			UpdateTabBar
+		)
 	end
 
 	--==============================================================
@@ -126,16 +166,26 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	local Button =
 		WindowData.ToolBar.TabButton:Clone()
 
-	Button.Name = Name
-	Button.Text = Name
-	Button.Visible = true
-	Button.Active = true
-	Button.Selectable = true
+	Button.Name =
+		Name
+
+	Button.Text =
+		Name
+
+	Button.Visible =
+		true
+
+	Button.Active =
+		true
+
+	Button.Selectable =
+		true
 
 	Button.LayoutOrder =
 		#WindowData.Tabs + 1
 
-	Button.Parent = TabBar
+	Button.Parent =
+		TabBar
 
 	--==============================================================
 	-- TAB CONTENT
@@ -147,8 +197,11 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	local Content =
 		Template:Clone()
 
-	Content.Name = Name
-	Content.Visible = false
+	Content.Name =
+		Name
+
+	Content.Visible =
+		false
 
 	Content.Position =
 		UDim2.fromOffset(0, 0)
@@ -181,8 +234,8 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 		Button = Button,
 		Content = Content,
-		Body = WindowData.Body,
 
+		Body = WindowData.Body,
 		TabBar = TabBar,
 
 		UIListLayout =
@@ -197,6 +250,7 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 		Active = false,
 		Destroyed = false,
+
 		NeedsScroll = false,
 
 		ScrollBarThickness =
@@ -205,36 +259,39 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 			or 4,
 	}
 
-	Config.__TabData = Data
-
-	WindowData.Tabs =
-		WindowData.Tabs or {}
+	Config.__TabData =
+		Data
 
 	table.insert(
 		WindowData.Tabs,
 		Config
 	)
 
-	Config.Button = Button
-	Config.Content = Content
-	Config.ParentWindow = WindowConfig
+	Config.Button =
+		Button
 
-	--==============================================================
-	-- WINDOW INTERACTION
-	--==============================================================
+	Config.Content =
+		Content
 
+	Config.ParentWindow =
+		WindowConfig
+
+	Config.TabBar =
+		TabBar
+
+	-- Prevent Toolbar from starting Window drag.
 	if WindowConfig.RegisterInteraction then
-		WindowConfig:RegisterInteraction(Button)
+		WindowConfig:RegisterInteraction(
+			Button
+		)
 	end
 
-	--==============================================================
-	-- HIDE TEMPLATE
-	--==============================================================
-
-	Template.Visible = false
+	-- Template is not a real tab.
+	Template.Visible =
+		false
 
 	--==============================================================
-	-- ATTACH METHODS
+	-- METHODS
 	--==============================================================
 
 	Methods.Attach(
@@ -256,13 +313,17 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	--==============================================================
 
 	if Config.Visible == true then
-		WindowConfig:ShowTab(Config)
+		WindowConfig:ShowTab(
+			Config
+		)
 	elseif #WindowData.Tabs == 1 then
-		WindowConfig:ShowTab(Config)
+		WindowConfig:ShowTab(
+			Config
+		)
 	end
 
 	--==============================================================
-	-- INITIAL UPDATE
+	-- INITIAL SCROLL
 	--==============================================================
 
 	task.defer(function()
