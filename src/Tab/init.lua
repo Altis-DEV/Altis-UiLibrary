@@ -3,19 +3,56 @@
 local Tab = {}
 
 function Tab.new(Context, WindowConfig, WindowData, Config)
-	assert(Context, "Tab.new: Context is required")
-	assert(Context.ImGui, "Tab.new: Context.ImGui is required")
-	assert(Context.Core, "Tab.new: Context.Core is required")
-	assert(Context.Prefabs, "Tab.new: Context.Prefabs is required")
+	assert(
+		Context,
+		"Tab.new: Context is required"
+	)
+
+	assert(
+		Context.ImGui,
+		"Tab.new: Context.ImGui is required"
+	)
+
+	assert(
+		Context.Core,
+		"Tab.new: Context.Core is required"
+	)
+
+	assert(
+		Context.Prefabs,
+		"Tab.new: Context.Prefabs is required"
+	)
+
+	assert(
+		Context.Load,
+		"Tab.new: Context.Load is required"
+	)
 
 	Config = Config or {}
 
 	local ImGui = Context.ImGui
-	local Prefabs = Context.Prefabs
+	local Core = Context.Core
+	local UIS = Core.Services.UserInputService
 
 	local Methods = Context.Load(
 		"src/Tab/method.lua"
 	)
+
+	--==============================================================
+	-- CONFIG
+	--==============================================================
+
+	local Name = Config.Name or ""
+
+	local AutoSizeAxis =
+		WindowConfig.AutoSize
+		or "Y"
+
+	-- Default scrollbar thickness.
+	local ScrollBarThickness =
+		Config.ScrollBarThickness
+		or WindowConfig.ScrollBarThickness
+		or 4
 
 	--==============================================================
 	-- TAB BUTTON
@@ -24,50 +61,103 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	local Button =
 		WindowData.ToolBar.TabButton:Clone()
 
-	Button.Name =
-		Config.Name or ""
-
-	Button.Text =
-		Config.Name or ""
-
+	Button.Name = Name
+	Button.Text = Name
 	Button.Visible = true
-	Button.Parent =
-		WindowData.ToolBar
+	Button.Parent = WindowData.ToolBar
 
 	--==============================================================
-	-- TAB CONTENT
+	-- SCROLL FRAME
+	--
+	-- We do not replace the original Template.
+	-- Instead, it is placed inside a ScrollingFrame.
+	--
+	-- This keeps the original content Frame structure intact
+	-- for ContainerClass and future Elements.
 	--==============================================================
 
-	local Content =
-		WindowData.Body.Template:Clone()
+	local ScrollFrame =
+		Instance.new("ScrollingFrame")
 
-	Content.Name =
-		Config.Name or ""
+	ScrollFrame.Name = Name
+	ScrollFrame.BackgroundTransparency = 1
+	ScrollFrame.BorderSizePixel = 0
 
-	Content.Visible =
-		Config.Visible == true
+	ScrollFrame.Size =
+		UDim2.fromScale(1, 1)
 
-	Content.Parent =
+	ScrollFrame.Position =
+		UDim2.fromScale(0, 0)
+
+	ScrollFrame.CanvasSize =
+		UDim2.new(0, 0, 0, 0)
+
+	ScrollFrame.CanvasPosition =
+		Vector2.zero
+
+	ScrollFrame.AutomaticCanvasSize =
+		Enum.AutomaticSize.None
+
+	ScrollFrame.ScrollBarThickness =
+		ScrollBarThickness
+
+	ScrollFrame.ScrollingEnabled =
+		false
+
+	ScrollFrame.ScrollingDirection =
+		Enum.ScrollingDirection.Y
+
+	ScrollFrame.VerticalScrollBarInset =
+		Enum.ScrollBarInset.ScrollBar
+
+	ScrollFrame.HorizontalScrollBarInset =
+		Enum.ScrollBarInset.None
+
+	ScrollFrame.Parent =
 		WindowData.Body
 
 	--==============================================================
-	-- AUTO SIZE
+	-- ORIGINAL CONTENT FRAME
 	--==============================================================
 
-	local AutoSizeAxis =
-		WindowConfig.AutoSize
-		or "Y"
+	local Template =
+		WindowData.Body.Template
+
+	local Content =
+		Template:Clone()
+
+	Content.Name = Name
+	Content.Visible = true
+	Content.Parent = ScrollFrame
+
+	--==============================================================
+	-- CONTENT SIZE
+	--==============================================================
 
 	Content.AutomaticSize =
-		Enum.AutomaticSize[AutoSizeAxis]
+		Enum.AutomaticSize.None
 
 	if AutoSizeAxis == "Y" then
 		Content.Size =
-			UDim2.fromScale(1, 0)
+			UDim2.new(
+				1,
+				-ScrollBarThickness,
+				0,
+				0
+			)
 
 	elseif AutoSizeAxis == "X" then
 		Content.Size =
-			UDim2.fromScale(0, 1)
+			UDim2.new(
+				0,
+				0,
+				1,
+				0
+			)
+
+	else
+		Content.Size =
+			UDim2.fromScale(1, 1)
 	end
 
 	--==============================================================
@@ -78,12 +168,27 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 		Context = Context,
 
 		ImGui = ImGui,
+		Core = Core,
 
 		ParentWindow = WindowData,
 
 		Button = Button,
+
+		ScrollFrame = ScrollFrame,
 		Content = Content,
+
+		ScrollBarThickness =
+			ScrollBarThickness,
+
+		Destroyed = false,
 	}
+
+	--==============================================================
+	-- DEFAULT VISIBILITY
+	--==============================================================
+
+	ScrollFrame.Visible =
+		Config.Visible == true
 
 	--==============================================================
 	-- CONFIG REFERENCES
@@ -91,7 +196,30 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 
 	Config.Button = Button
 	Config.Content = Content
+	Config.ScrollFrame = ScrollFrame
 	Config.ParentWindow = WindowConfig
+
+	--==============================================================
+	-- TAB BUTTON INTERACTION
+	--
+	-- Prevent Window mobile drag from starting when the user
+	-- presses the Tab button.
+	--==============================================================
+
+	if WindowConfig.RegisterInteraction then
+		WindowConfig:RegisterInteraction(Button)
+	end
+
+	--==============================================================
+	-- SCROLLBAR INTERACTION
+	--
+	-- Prevent Window dragging when directly touching the native
+	-- scrollbar.
+	--==============================================================
+
+	if WindowConfig.RegisterInteraction then
+		WindowConfig:RegisterInteraction(ScrollFrame)
+	end
 
 	--==============================================================
 	-- METHODS
@@ -104,7 +232,7 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	)
 
 	--==============================================================
-	-- INITIAL BODY UPDATE
+	-- BODY UPDATE
 	--==============================================================
 
 	if WindowConfig.UpdateBody then
@@ -112,7 +240,7 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 	end
 
 	--==============================================================
-	-- AUTO WINDOW SIZE
+	-- WINDOW AUTO SIZE
 	--==============================================================
 
 	if WindowConfig.AutoSize then
@@ -129,6 +257,27 @@ function Tab.new(Context, WindowConfig, WindowData, Config)
 			end
 		end)
 	end
+
+	--==============================================================
+	-- CLEAN TEMPLATE
+	--
+	-- The original Template is only a prefab.
+	-- It should never remain visible as a real tab.
+	--==============================================================
+
+	Template.Visible = false
+
+	--==============================================================
+	-- FIRST UPDATE
+	--==============================================================
+
+	task.defer(function()
+		if Data.Destroyed then
+			return
+		end
+
+		Config:UpdateScroll()
+	end)
 
 	--==============================================================
 	-- RETURN
