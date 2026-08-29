@@ -86,7 +86,7 @@ function Methods.UpdateContentSize(Data)
 end
 
 --==============================================================
--- BODY SCROLL
+-- UPDATE SCROLL
 --==============================================================
 
 function Methods.UpdateScroll(Data)
@@ -116,16 +116,13 @@ function Methods.UpdateScroll(Data)
 		return
 	end
 
-	local CanvasHeight =
-		math.max(
-			ContentHeight,
-			ViewportHeight
-		)
-
 	Body.CanvasSize =
 		UDim2.fromOffset(
 			0,
-			CanvasHeight
+			math.max(
+				ContentHeight,
+				ViewportHeight
+			)
 		)
 
 	Body.ScrollingDirection =
@@ -134,9 +131,6 @@ function Methods.UpdateScroll(Data)
 	Body.HorizontalScrollBarInset =
 		Enum.ScrollBarInset.None
 
-	-- Keep native Roblox scrollbar.
-	-- Its thumb scales automatically according to
-	-- CanvasSize versus viewport size.
 	Body.ScrollBarThickness =
 		Data.ScrollBarThickness
 
@@ -144,12 +138,11 @@ function Methods.UpdateScroll(Data)
 		ContentHeight
 		> ViewportHeight + 1
 
-	-- Keep current position valid if content shrinks.
 	local Maximum =
 		math.max(
 			0,
 			Body.AbsoluteCanvasSize.Y
-			- Body.AbsoluteWindowSize.Y
+				- Body.AbsoluteWindowSize.Y
 		)
 
 	if Body.CanvasPosition.Y > Maximum then
@@ -217,7 +210,7 @@ function Methods.ScrollToBottom(Data)
 		math.max(
 			0,
 			Body.AbsoluteCanvasSize.Y
-			- Body.AbsoluteWindowSize.Y
+				- Body.AbsoluteWindowSize.Y
 		)
 
 	Body.CanvasPosition =
@@ -255,7 +248,7 @@ function Methods.SetScrollPosition(Data, Position)
 		math.max(
 			0,
 			Body.AbsoluteCanvasSize.Y
-			- Body.AbsoluteWindowSize.Y
+				- Body.AbsoluteWindowSize.Y
 		)
 
 	Body.CanvasPosition =
@@ -286,10 +279,6 @@ end
 function Methods.Attach(Context, Config, Data)
 	local ImGui =
 		Context.ImGui
-
-	--============================================================
-	-- REFERENCES
-	--============================================================
 
 	Config.Button =
 		Data.Button
@@ -405,6 +394,10 @@ function Methods.Attach(Context, Config, Data)
 		end
 	)
 
+	--============================================================
+	-- ANIMATION
+	--============================================================
+
 	ImGui:ApplyAnimations(
 		Data.Button,
 		"Tabs"
@@ -445,13 +438,15 @@ function Methods.Attach(Context, Config, Data)
 
 	Data.Body:GetPropertyChangedSignal(
 		"AbsoluteSize"
-	):Connect(function()
-		if Data.Active then
-			Methods.UpdateScroll(
-				Data
-			)
+	):Connect(
+		function()
+			if Data.Active then
+				Methods.UpdateScroll(
+					Data
+				)
+			end
 		end
-	end)
+	)
 
 	return Config
 end
