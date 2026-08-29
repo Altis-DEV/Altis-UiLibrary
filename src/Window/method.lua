@@ -54,6 +54,12 @@ function Methods.Attach(Context, Config, Data)
 
 	Data.Destroyed = false
 
+	Data.Tabs =
+		Data.Tabs or {}
+
+	Config.ActiveTab =
+		nil
+
 	--============================================================
 	-- CLOSE
 	--============================================================
@@ -162,9 +168,7 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		local HeaderSizeY =
-			Methods.GetHeaderSizeY(
-				Data
-			)
+			Methods.GetHeaderSizeY(Data)
 
 		local NewSize =
 			UDim2.new(
@@ -172,7 +176,8 @@ function Methods.Attach(Context, Config, Data)
 				Size.X.Offset,
 
 				Size.Y.Scale,
-				Size.Y.Offset + HeaderSizeY
+				Size.Y.Offset
+					+ HeaderSizeY
 			)
 
 		Config.Size =
@@ -193,7 +198,8 @@ function Methods.Attach(Context, Config, Data)
 			return self
 		end
 
-		Open = Open == true
+		Open =
+			Open == true
 
 		Config.Open =
 			Open
@@ -291,7 +297,7 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		--========================================================
-		-- HIDE ALL OTHER TABS
+		-- HIDE OTHER TABS
 		--========================================================
 
 		for _, OtherConfig in next, Data.Tabs do
@@ -307,24 +313,18 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		--========================================================
-		-- ACTIVATE
+		-- ACTIVATE TARGET
 		--========================================================
 
 		TargetData.Active = true
 		TargetData.Content.Visible = true
 
-		--========================================================
-		-- STORE STATE IN RAW CONFIG
-		--
-		-- NEVER use self.ActiveTab here.
-		-- self is the merged GUI object wrapper.
-		--========================================================
-
+		-- State stays in Config, not the merged Frame wrapper.
 		Config.ActiveTab =
 			TabConfig
 
 		--========================================================
-		-- RESET BODY SCROLL
+		-- RESET SCROLL
 		--========================================================
 
 		Data.Body.CanvasPosition =
@@ -335,10 +335,13 @@ function Methods.Attach(Context, Config, Data)
 		--========================================================
 
 		TargetData.Content.Position =
-			UDim2.fromOffset(0, 5)
+			UDim2.fromOffset(
+				0,
+				5
+			)
 
 		--========================================================
-		-- PAGE ANIMATION
+		-- ANIMATION
 		--========================================================
 
 		if not TabConfig.NoAnimation then
@@ -354,7 +357,10 @@ function Methods.Attach(Context, Config, Data)
 			)
 		else
 			TargetData.Content.Position =
-				UDim2.fromOffset(0, 0)
+				UDim2.fromOffset(
+					0,
+					0
+				)
 		end
 
 		--========================================================
