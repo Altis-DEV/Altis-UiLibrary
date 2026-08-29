@@ -21,7 +21,18 @@ function Window.new(Context, WindowConfig)
 	)
 
 	--==============================================================
-	-- CREATE
+	-- NORMALIZE SIZE CONFIG
+	--==============================================================
+
+	if typeof(WindowConfig.Size) == "Vector2" then
+		WindowConfig.Size = UDim2.fromOffset(
+			WindowConfig.Size.X,
+			WindowConfig.Size.Y
+		)
+	end
+
+	--==============================================================
+	-- CREATE WINDOW
 	--==============================================================
 
 	local Frame =
@@ -35,10 +46,13 @@ function Window.new(Context, WindowConfig)
 	WindowConfig.Window =
 		Frame
 
-	-- Always have a valid size.
-	WindowConfig.Size =
-		WindowConfig.Size
-		or Frame.Size
+	-- Apply the requested size immediately.
+	-- This must happen before any dependent layout calculation.
+	if typeof(WindowConfig.Size) == "UDim2" then
+		Frame.Size = WindowConfig.Size
+	else
+		WindowConfig.Size = Frame.Size
+	end
 
 	--==============================================================
 	-- REFERENCES
@@ -59,7 +73,36 @@ function Window.new(Context, WindowConfig)
 	local Toggle =
 		TitleBar.Left.Toggle
 
-	-- Body is the real vertical scrolling container.
+	--==============================================================
+	-- PRESERVE TOOLBAR HEIGHT
+	--==============================================================
+
+	local OriginalToolBarHeight =
+		ToolBar.AbsoluteSize.Y
+
+	-- If AbsoluteSize is not initialized yet, use the template.
+	if OriginalToolBarHeight <= 0 then
+		OriginalToolBarHeight =
+			ToolBar.TabButton.AbsoluteSize.Y
+	end
+
+	-- Safe fallback for unusual/custom prefabs.
+	if OriginalToolBarHeight <= 0 then
+		OriginalToolBarHeight = 32
+	end
+
+	ToolBar.Size =
+		UDim2.new(
+			1,
+			0,
+			0,
+			OriginalToolBarHeight
+		)
+
+	--==============================================================
+	-- BODY
+	--==============================================================
+
 	Body.AutomaticCanvasSize =
 		Enum.AutomaticSize.None
 
@@ -108,16 +151,17 @@ function Window.new(Context, WindowConfig)
 
 		DragEnabled =
 			WindowConfig.NoDrag ~= true,
+
+		ToolBarHeight =
+			OriginalToolBarHeight,
 	}
 
 	WindowConfig.__WindowData =
 		Data
 
-	-- IMPORTANT:
-	-- ActiveTab is initialized as a Lua table value.
-	-- This prevents MergeMetatables from trying to write
-	-- ActiveTab into the Roblox Frame.
-	WindowConfig.ActiveTab = false
+	-- Keep state in the Lua config table.
+	-- Do NOT write arbitrary state through the merged Frame wrapper.
+	WindowConfig.ActiveTab = nil
 
 	--==============================================================
 	-- HIT TEST
@@ -204,9 +248,15 @@ function Window.new(Context, WindowConfig)
 	--==============================================================
 
 	function Data:BeginDrag(Input)
-		if self.Destroyed
-			or not self.DragEnabled
-			or self.Dragging
+		if self.Destroyed then
+			return
+		end
+
+		if not self.DragEnabled then
+			return
+		end
+
+		if self.Dragging
 			or self.Resizing then
 			return
 		end
@@ -280,8 +330,11 @@ function Window.new(Context, WindowConfig)
 		or Vector2.new(160, 90)
 
 	function Data:BeginResize(Input)
-		if self.Destroyed
-			or self.Resizing
+		if self.Destroyed then
+			return
+		end
+
+		if self.Resizing
 			or self.Dragging then
 			return
 		end
@@ -374,14 +427,13 @@ function Window.new(Context, WindowConfig)
 	Data.Resize.Visible =
 		WindowConfig.NoResize ~= true
 
-	-- Resize corner always has priority.
+	--==============================================================
+	-- INTERACTION: RESIZE
+	--==============================================================
+
 	Data:RegisterInteraction(
 		Data.Resize
 	)
-
-	--==============================================================
-	-- RESIZE INPUT
-	--==============================================================
 
 	Data.Resize.InputBegan:Connect(function(Input)
 		local InputType =
@@ -425,6 +477,7 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
+		-- Resize gets first priority.
 		if Data:IsPointInside(
 			Data.Resize,
 			Position
@@ -432,6 +485,7 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
+		-- Registered controls get priority.
 		if Data:IsInteractionPoint(
 			Position
 		) then
@@ -442,15 +496,13 @@ function Window.new(Context, WindowConfig)
 			return
 		end
 
-		-- Mobile:
-		-- Touch anywhere inside Window.
+		-- Mobile: anywhere inside the Window.
 		if InputType == Enum.UserInputType.Touch then
 			Data:BeginDrag(Input)
 			return
 		end
 
-		-- Desktop:
-		-- Only TitleBar.
+		-- PC: TitleBar only.
 		if Data:IsPointInside(
 			TitleBar,
 			Position
@@ -460,7 +512,7 @@ function Window.new(Context, WindowConfig)
 	end)
 
 	--==============================================================
-	-- INPUT CHANGED
+	-- GLOBAL INPUT CHANGED
 	--==============================================================
 
 	UIS.InputChanged:Connect(function(Input)
@@ -516,7 +568,7 @@ function Window.new(Context, WindowConfig)
 	end)
 
 	--==============================================================
-	-- INPUT ENDED
+	-- GLOBAL INPUT ENDED
 	--==============================================================
 
 	UIS.InputEnded:Connect(function(Input)
@@ -563,7 +615,7 @@ function Window.new(Context, WindowConfig)
 	WindowConfig.UpdateBody()
 
 	--==============================================================
-	-- WINDOW METHODS
+	-- METHODS
 	--==============================================================
 
 	Methods.Attach(
@@ -599,6 +651,24 @@ function Window.new(Context, WindowConfig)
 		WindowConfig,
 		WindowConfig.Colors
 	)
+
+	-- Re-apply size after style processing.
+	if typeof(WindowConfig.Size) == "UDim2" then
+		Frame.Size =
+			WindowConfig.Size
+	end
+
+	-- Re-apply toolbar height because style/layout processing can
+	-- alter it.
+	if ToolBar.Visible then
+		ToolBar.Size =
+			UDim2.new(
+				1,
+				0,
+				0,
+				Data.ToolBarHeight
+			)
+	end
 
 	--==============================================================
 	-- REGISTER
