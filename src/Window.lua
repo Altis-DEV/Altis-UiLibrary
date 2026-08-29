@@ -1,59 +1,43 @@
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-local WindowModule = {}
+local Window = {}
+Window.__index = Window
 
---==================================================
--- Constants
---==================================================
-
-local TOPBAR_HEIGHT = 32
-local TABBAR_HEIGHT = TOPBAR_HEIGHT
-
-local CONTROL_SIZE = 32
-
+local TOPBAR_HEIGHT = 30
+local TABBAR_HEIGHT = 25
+local BUTTON_SIZE = 25
 local RESIZE_SIZE = 25
-local RESIZE_TEXT_SIZE = 24
+local MIN_SIZE = Vector2.new(200, 120)
 
-local DEFAULT_MIN_WIDTH = 300
-local DEFAULT_MIN_HEIGHT = 200
+local CLOSE_IMAGE = "rbxassetid://127173792845658"
+local TOGGLE_TEXT = "▼"
+local RESIZE_TEXT = "◢"
 
-local CLOSE_ICON = "rbxassetid://127173792845658"
-
---==================================================
--- Utility
---==================================================
-
-local function Create(className, properties, parent)
+local function make(className, props, parent)
     local object = Instance.new(className)
 
-    for property, value in pairs(properties or {}) do
-        object[property] = value
+    for key, value in pairs(props or {}) do
+        object[key] = value
     end
 
     object.Parent = parent
-
     return object
 end
 
-local function GetTheme(Themes, name)
+local function getTheme(themes, name)
     name = name or "Default"
 
-    local theme = Themes[name]
-
-    if typeof(theme) ~= "table" then
-        theme = Themes.Default
+    local theme = themes and themes[name]
+    if type(theme) ~= "table" then
+        theme = themes and themes.Default
     end
 
-    assert(
-        typeof(theme) == "table",
-        "Window.lua: Default theme is missing."
-    )
-
-    return theme
+    assert(type(theme) == "table", "Window: Default theme was not found")
+    return theme, name
 end
 
-local function ConvertAlignment(value)
+local function alignment(value)
     if value == "Center" then
         return Enum.TextXAlignment.Center
     elseif value == "Right" then
@@ -63,1026 +47,404 @@ local function ConvertAlignment(value)
     return Enum.TextXAlignment.Left
 end
 
---==================================================
--- Create Window
---==================================================
-
-function WindowModule.CreateWindow(Themes, config)
-
+function Window.CreateWindow(themes, config)
     config = config or {}
 
-    local title = config.Title or "Window"
+    local theme, themeName = getTheme(themes, config.Theme)
+    local size = typeof(config.Size) == "UDim2" and config.Size or UDim2.fromOffset(500, 350)
 
-    local size = config.Size
+    local self = setmetatable({}, Window)
 
-    if typeof(size) ~= "UDim2" then
-        size = UDim2.fromOffset(500, 350)
-    end
+    self.ThemeName = themeName
+    self.Theme = theme
+    self._destroyed = false
+    self._open = true
+    self._openSize = size
+    self._dragInput = nil
+    self._dragging = false
+    self._dragStart = nil
+    self._startPosition = nil
+    self._resizeInput = nil
+    self._resizing = false
+    self._resizeStart = nil
+    self._startSize = nil
 
-    local textAlignment = ConvertAlignment(
-        config.TextAlignment or "Left"
-    )
+    self.NoToggleState = config.NoToggle == true
+    self.NoCloseState = config.NoClose == true
+    self.NoTabbarState = config.NoTabbar == true
+    self.NoResizeState = config.NoResize == true
+    self.NoTopbarState = config.NoTopbar == true
 
-    local themeName = config.Theme or "Default"
-    local theme = GetTheme(Themes, themeName)
-
-    local minimumSize = config.MinimumSize
-
-    if typeof(minimumSize) ~= "Vector2" then
-        minimumSize = Vector2.new(
-            DEFAULT_MIN_WIDTH,
-            DEFAULT_MIN_HEIGHT
-        )
-    end
-
-    --==================================================
-    -- State
-    --==================================================
-
-    local state = {
-        Title = title,
-
-        ThemeName = themeName,
-
-        IsOpen = true,
-        Destroyed = false,
-
-        NoToggle = config.NoToggle == true,
-        NoClose = config.NoClose == true,
-        NoTabbar = config.NoTabbar == true,
-        NoResize = config.NoResize == true,
-        NoTopbar = config.NoTopbar == true,
-
-        OpenSize = size,
-
-        Dragging = false,
-        DragInput = nil,
-
-        Resizing = false,
-        ResizeInput = nil,
-
-        DragStart = nil,
-        ResizeStart = nil,
-
-        StartPosition = nil,
-        StartSize = nil,
-    }
-
-    --==================================================
-    -- ScreenGui
-    --==================================================
-
-    local ScreenGui = CoreGui:FindFirstChild("imgui")
-
-    if not ScreenGui then
-        ScreenGui = Create("ScreenGui", {
+    local gui = CoreGui:FindFirstChild("imgui")
+    if not gui then
+        gui = make("ScreenGui", {
             Name = "imgui",
-
             ResetOnSpawn = false,
-
-            ZIndexBehavior =
-                Enum.ZIndexBehavior.Sibling,
+            ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         }, CoreGui)
     end
 
-    --==================================================
-    -- Window
-    --==================================================
+    self.Gui = gui
 
-    local WindowFrame = Create("Frame", {
+    self.Instance = make("ImageLabel", {
         Name = "Window",
-
         Size = size,
-
-        Position =
-            UDim2.fromOffset(100, 100),
-
-        BackgroundColor3 =
-            theme.Background,
-
-        BorderSizePixel = 0,
-
+        Position = UDim2.fromOffset(100, 100),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://2851926732",
+        ImageColor3 = theme.Background,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceScale = 0.1,
+        SliceCenter = Rect.new(12, 12, 12, 12),
         Active = true,
-
         ClipsDescendants = true,
-    }, ScreenGui)
+    }, gui)
 
-    --==================================================
-    -- Topbar
-    --==================================================
-
-    local Topbar = Create("Frame", {
+    self.Topbar = make("Frame", {
         Name = "Topbar",
-
-        Size = UDim2.new(
-            1,
-            0,
-            0,
-            TOPBAR_HEIGHT
-        ),
-
-        Position = UDim2.fromOffset(
-            0,
-            0
-        ),
-
-        BackgroundColor3 =
-            theme.Topbar,
-
+        Position = UDim2.fromOffset(0, 0),
+        Size = UDim2.new(1, 0, 0, TOPBAR_HEIGHT),
+        BackgroundColor3 = theme.Topbar,
         BorderSizePixel = 0,
-
         Active = true,
-    }, WindowFrame)
+    }, self.Instance)
 
-    --==================================================
-    -- Toggle Button
-    --==================================================
-
-    local ToggleButton = Create("TextButton", {
+    self.ToggleButton = make("TextButton", {
         Name = "ToggleButton",
-
-        Size = UDim2.fromOffset(
-            CONTROL_SIZE,
-            TOPBAR_HEIGHT
-        ),
-
-        Position = UDim2.fromOffset(
-            0,
-            0
-        ),
-
+        Position = UDim2.fromOffset(0, 0),
+        Size = UDim2.fromOffset(BUTTON_SIZE, BUTTON_SIZE),
         BackgroundTransparency = 1,
-
         BorderSizePixel = 0,
-
-        Text = "▼",
-
-        TextColor3 =
-            theme.Text,
-
-        TextSize = 18,
-
-        Font =
-            Enum.Font.GothamBold,
-
+        Text = TOGGLE_TEXT,
+        TextColor3 = theme.Text,
+        Font = Enum.Font.GothamBold,
+        TextSize = BUTTON_SIZE,
         AutoButtonColor = false,
-    }, Topbar)
+        Active = true,
+        Selectable = false,
+    }, self.Topbar)
 
-    --==================================================
-    -- Close Button
-    --==================================================
-
-    local CloseButton = Create("ImageButton", {
+    self.CloseButton = make("ImageButton", {
         Name = "CloseButton",
-
-        Size = UDim2.fromOffset(
-            CONTROL_SIZE,
-            TOPBAR_HEIGHT
-        ),
-
-        Position = UDim2.new(
-            1,
-            -CONTROL_SIZE,
-            0,
-            0
-        ),
-
+        Position = UDim2.new(1, -BUTTON_SIZE, 0, 0),
+        Size = UDim2.fromOffset(BUTTON_SIZE, BUTTON_SIZE),
         BackgroundTransparency = 1,
-
         BorderSizePixel = 0,
-
-        Image = CLOSE_ICON,
-
-        ImageColor3 =
-            theme.Text,
-
+        Image = CLOSE_IMAGE,
+        ImageColor3 = theme.Text,
         AutoButtonColor = false,
-    }, Topbar)
+        Active = true,
+        Selectable = false,
+    }, self.Topbar)
 
-    --==================================================
-    -- Title Frame
-    --==================================================
-
-    local TitleFrame = Create("Frame", {
+    self.TitleFrame = make("Frame", {
         Name = "TitleFrame",
-
-        Size = UDim2.new(
-            1,
-            -(CONTROL_SIZE * 2),
-            1,
-            0
-        ),
-
-        Position = UDim2.fromOffset(
-            CONTROL_SIZE,
-            0
-        ),
-
+        Position = UDim2.fromOffset(BUTTON_SIZE, 0),
+        Size = UDim2.new(1, -(BUTTON_SIZE * 2), 1, 0),
         BackgroundTransparency = 1,
-
         BorderSizePixel = 0,
-    }, Topbar)
+    }, self.Topbar)
 
-    local TitleLabel = Create("TextLabel", {
+    self.Title = make("TextLabel", {
         Name = "Title",
-
-        Size = UDim2.fromScale(
-            1,
-            1
-        ),
-
+        Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
-
         BorderSizePixel = 0,
-
-        Text = title,
-
-        TextColor3 =
-            theme.Text,
-
+        Text = tostring(config.Title or "Window"),
+        TextColor3 = theme.Text,
+        Font = Enum.Font.GothamBold,
         TextSize = 14,
+        TextXAlignment = alignment(config.TextAlignment),
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    }, self.TitleFrame)
 
-        Font =
-            Enum.Font.Gotham,
-
-        TextXAlignment =
-            textAlignment,
-
-        TextYAlignment =
-            Enum.TextYAlignment.Center,
-
-        TextTruncate =
-            Enum.TextTruncate.AtEnd,
-    }, TitleFrame)
-
-    --==================================================
-    -- Tab Selection
-    --==================================================
-
-    local TabSelection = Create("Frame", {
-        Name = "TabSelection",
-
-        Size = UDim2.new(
-            1,
-            0,
-            0,
-            TABBAR_HEIGHT
-        ),
-
-        Position = UDim2.fromOffset(
-            0,
-            TOPBAR_HEIGHT
-        ),
-
+    self.TabBar = make("ImageLabel", {
+        Name = "TabBar",
+        Position = UDim2.fromOffset(5, TOPBAR_HEIGHT),
+        Size = UDim2.new(1, -10, 0, TABBAR_HEIGHT),
         BackgroundTransparency = 1,
+        Image = "rbxassetid://2851929490",
+        ImageColor3 = theme.TabContainer,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceScale = 0.1,
+        SliceCenter = Rect.new(4, 4, 4, 4),
+    }, self.Instance)
 
-        BorderSizePixel = 0,
-    }, WindowFrame)
-
-    --==================================================
-    -- Tab Buttons
-    --==================================================
-
-    local TabButtons = Create("ScrollingFrame", {
+    self.TabButtons = make("ScrollingFrame", {
         Name = "TabButtons",
-
-        Size = UDim2.fromScale(
-            1,
-            1
-        ),
-
-        Position = UDim2.fromOffset(
-            0,
-            0
-        ),
-
-        BackgroundColor3 =
-            theme.TabContainer,
-
-        BorderSizePixel = 0,
-
-        CanvasSize =
-            UDim2.new(0, 0, 0, 0),
-
-        AutomaticCanvasSize =
-            Enum.AutomaticSize.X,
-
-        ScrollingDirection =
-            Enum.ScrollingDirection.X,
-
-        ScrollingEnabled = true,
-
-        ScrollBarThickness = 0,
-
-        HorizontalScrollBarInset =
-            Enum.ScrollBarInset.None,
-
-        VerticalScrollBarInset =
-            Enum.ScrollBarInset.None,
-
-        Active = true,
-
-        ClipsDescendants = true,
-    }, TabSelection)
-
-    local TabLayout = Create("UIListLayout", {
-        FillDirection =
-            Enum.FillDirection.Horizontal,
-
-        HorizontalAlignment =
-            Enum.HorizontalAlignment.Left,
-
-        VerticalAlignment =
-            Enum.VerticalAlignment.Center,
-
-        SortOrder =
-            Enum.SortOrder.LayoutOrder,
-
-        Padding =
-            UDim.new(0, 2),
-    }, TabButtons)
-
-    --==================================================
-    -- Background
-    --==================================================
-
-    local Background = Create("Frame", {
-        Name = "Background",
-
-        Size = UDim2.new(
-            1,
-            0,
-            1,
-            -(
-                TOPBAR_HEIGHT
-                + TABBAR_HEIGHT
-            )
-        ),
-
-        Position = UDim2.fromOffset(
-            0,
-            TOPBAR_HEIGHT
-            + TABBAR_HEIGHT
-        ),
-
-        BackgroundColor3 =
-            theme.Background,
-
-        BorderSizePixel = 0,
-
-        Active = true,
-
-        ClipsDescendants = true,
-    }, WindowFrame)
-
-    --==================================================
-    -- Resize Corner
-    --==================================================
-
-    local ResizeCorner = Create("TextButton", {
-        Name = "ResizeCorner",
-
-        Size = UDim2.fromOffset(
-            RESIZE_SIZE,
-            RESIZE_SIZE
-        ),
-
-        Position = UDim2.new(
-            1,
-            -RESIZE_SIZE,
-            1,
-            -RESIZE_SIZE
-        ),
-
+        Position = UDim2.fromOffset(0, 0),
+        Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
-
         BorderSizePixel = 0,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.X,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+        ScrollBarThickness = 0,
+        ScrollingEnabled = true,
+        Active = true,
+    }, self.TabBar)
 
-        Text = "◢",
+    self.TabLayout = make("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 2),
+    }, self.TabButtons)
 
-        TextColor3 =
-            theme.ResizeCorner,
+    self.Background = make("Frame", {
+        Name = "Background",
+        Position = UDim2.fromOffset(5, TOPBAR_HEIGHT + TABBAR_HEIGHT),
+        Size = UDim2.new(1, -10, 1, -(TOPBAR_HEIGHT + TABBAR_HEIGHT) - 5),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Active = true,
+    }, self.Instance)
 
-        TextSize =
-            RESIZE_TEXT_SIZE,
-
-        Font =
-            Enum.Font.GothamBold,
-
+    self.ResizeCorner = make("TextButton", {
+        Name = "ResizeCorner",
+        Position = UDim2.new(1, -RESIZE_SIZE, 1, -RESIZE_SIZE),
+        Size = UDim2.fromOffset(RESIZE_SIZE, RESIZE_SIZE),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = RESIZE_TEXT,
+        TextColor3 = theme.ResizeCorner,
+        TextSize = 24,
+        Font = Enum.Font.GothamBold,
         AutoButtonColor = false,
+        Active = true,
+        Selectable = false,
+    }, self.Background)
 
-        Visible =
-            not state.NoResize,
-    }, Background)
+    self:_updateLayout()
+    self:_connectInteractions()
 
-    --==================================================
-    -- Window Object
-    --==================================================
-
-    local Window = {}
-
-    Window.Instance = WindowFrame
-
-    Window.Topbar = Topbar
-    Window.TabSelection = TabSelection
-    Window.TabButtons = TabButtons
-    Window.Background = Background
-
-    Window.TitleFrame = TitleFrame
-    Window.Title = TitleLabel
-
-    Window.ToggleButton = ToggleButton
-    Window.CloseButton = CloseButton
-    Window.ResizeCorner = ResizeCorner
-
-    Window.Theme = theme
-
-    --==================================================
-    -- Layout
-    --==================================================
-
-    local function UpdateLayout()
-
-        if state.Destroyed then
-            return
-        end
-
-        local topbarHeight =
-            state.NoTopbar
-            and 0
-            or TOPBAR_HEIGHT
-
-        local tabbarHeight =
-            state.NoTabbar
-            and 0
-            or TABBAR_HEIGHT
-
-        -- Topbar
-
-        Topbar.Visible =
-            not state.NoTopbar
-
-        Topbar.Size =
-            UDim2.new(
-                1,
-                0,
-                0,
-                topbarHeight
-            )
-
-        -- Tab selection
-
-        TabSelection.Visible =
-            not state.NoTabbar
-
-        TabSelection.Position =
-            UDim2.fromOffset(
-                0,
-                topbarHeight
-            )
-
-        TabSelection.Size =
-            UDim2.new(
-                1,
-                0,
-                0,
-                tabbarHeight
-            )
-
-        -- Background
-
-        Background.Position =
-            UDim2.fromOffset(
-                0,
-                topbarHeight
-                + tabbarHeight
-            )
-
-        Background.Size =
-            UDim2.new(
-                1,
-                0,
-                1,
-                -(
-                    topbarHeight
-                    + tabbarHeight
-                )
-            )
-
-        -- Buttons
-
-        ToggleButton.Visible =
-            not state.NoToggle
-
-        CloseButton.Visible =
-            not state.NoClose
-
-        ResizeCorner.Visible =
-            not state.NoResize
-
-    end
-
-    --==================================================
-    -- Pointer helpers
-    --==================================================
-
-    local function IsPrimaryPointer(input)
-
-        return input.UserInputType ==
-            Enum.UserInputType.MouseButton1
-            or
-            input.UserInputType ==
-            Enum.UserInputType.Touch
-
-    end
-
-    --==================================================
-    -- Drag Start
-    --==================================================
-
-    Topbar.InputBegan:Connect(function(input)
-
-        if state.Destroyed then
-            return
-        end
-
-        if state.Dragging
-            or state.Resizing
-        then
-            return
-        end
-
-        if not IsPrimaryPointer(input) then
-            return
-        end
-
-        state.Dragging = true
-
-        state.DragInput = input
-
-        state.DragStart =
-            input.Position
-
-        state.StartPosition =
-            WindowFrame.Position
-
-    end)
-
-    --==================================================
-    -- Drag End
-    --==================================================
-
-    Topbar.InputEnded:Connect(function(input)
-
-        if input ~= state.DragInput then
-            return
-        end
-
-        state.Dragging = false
-        state.DragInput = nil
-
-    end)
-
-    --==================================================
-    -- Resize Start
-    --==================================================
-
-    ResizeCorner.InputBegan:Connect(function(input)
-
-        if state.Destroyed then
-            return
-        end
-
-        if state.NoResize then
-            return
-        end
-
-        if state.Dragging
-            or state.Resizing
-        then
-            return
-        end
-
-        if not IsPrimaryPointer(input) then
-            return
-        end
-
-        state.Resizing = true
-
-        state.ResizeInput = input
-
-        state.ResizeStart =
-            input.Position
-
-        state.StartSize =
-            WindowFrame.AbsoluteSize
-
-    end)
-
-    --==================================================
-    -- Resize End
-    --==================================================
-
-    ResizeCorner.InputEnded:Connect(function(input)
-
-        if input ~= state.ResizeInput then
-            return
-        end
-
-        state.Resizing = false
-        state.ResizeInput = nil
-
-    end)
-
-    --==================================================
-    -- Movement
-    --==================================================
-
-    UserInputService.InputChanged:Connect(function(input)
-
-        if state.Destroyed then
-            return
-        end
-
-        -- Drag
-
-        if state.Dragging then
-
-            if input ~= state.DragInput
-                and input.UserInputType
-                    ~= Enum.UserInputType.MouseMovement
-                and input.UserInputType
-                    ~= Enum.UserInputType.Touch
-            then
-                return
-            end
-
-            local delta =
-                input.Position
-                - state.DragStart
-
-            WindowFrame.Position =
-                UDim2.new(
-                    state.StartPosition.X.Scale,
-                    state.StartPosition.X.Offset
-                        + delta.X,
-
-                    state.StartPosition.Y.Scale,
-                    state.StartPosition.Y.Offset
-                        + delta.Y
-                )
-
-            return
-        end
-
-        -- Resize
-
-        if state.Resizing then
-
-            if input ~= state.ResizeInput
-                and input.UserInputType
-                    ~= Enum.UserInputType.MouseMovement
-                and input.UserInputType
-                    ~= Enum.UserInputType.Touch
-            then
-                return
-            end
-
-            local delta =
-                input.Position
-                - state.ResizeStart
-
-            local width =
-                math.max(
-                    state.StartSize.X + delta.X,
-                    minimumSize.X
-                )
-
-            local height =
-                math.max(
-                    state.StartSize.Y + delta.Y,
-                    minimumSize.Y
-                )
-
-            WindowFrame.Size =
-                UDim2.fromOffset(
-                    width,
-                    height
-                )
-
-            state.OpenSize =
-                WindowFrame.Size
-
-        end
-
-    end)
-
-    --==================================================
-    -- Open
-    --==================================================
-
-    function Window:Open()
-
-        if state.Destroyed then
-            return
-        end
-
-        state.IsOpen = true
-
-        WindowFrame.Visible = true
-
-        WindowFrame.Size =
-            state.OpenSize
-
-        ToggleButton.Rotation = 0
-
-    end
-
-    --==================================================
-    -- Close
-    --==================================================
-
-    function Window:Close()
-
-        if state.Destroyed then
-            return
-        end
-
-        state.IsOpen = false
-
-        state.OpenSize =
-            WindowFrame.Size
-
-        WindowFrame.Visible = true
-
-        WindowFrame.Size =
-            UDim2.new(
-                state.OpenSize.X.Scale,
-                state.OpenSize.X.Offset,
-
-                0,
-                TOPBAR_HEIGHT
-            )
-
-        ToggleButton.Rotation = -90
-
-    end
-
-    --==================================================
-    -- Toggle
-    --==================================================
-
-    function Window:Toggle()
-
-        if state.Destroyed then
-            return
-        end
-
-        if state.IsOpen then
-            self:Close()
-        else
-            self:Open()
-        end
-
-    end
-
-    --==================================================
-    -- SetTitle
-    --==================================================
-
-    function Window:SetTitle(newTitle)
-
-        if state.Destroyed then
-            return
-        end
-
-        if typeof(newTitle) ~= "string" then
-            return
-        end
-
-        state.Title = newTitle
-
-        TitleLabel.Text = newTitle
-
-    end
-
-    --==================================================
-    -- NoToggle
-    --==================================================
-
-    function Window:NoToggle(value)
-
-        if state.Destroyed then
-            return
-        end
-
-        if value == nil then
-            state.NoToggle =
-                not state.NoToggle
-        else
-            state.NoToggle =
-                value == true
-        end
-
-        ToggleButton.Visible =
-            not state.NoToggle
-
-    end
-
-    --==================================================
-    -- NoClose
-    --==================================================
-
-    function Window:NoClose(value)
-
-        if state.Destroyed then
-            return
-        end
-
-        if value == nil then
-            state.NoClose =
-                not state.NoClose
-        else
-            state.NoClose =
-                value == true
-        end
-
-        CloseButton.Visible =
-            not state.NoClose
-
-    end
-
-    --==================================================
-    -- NoTabbar
-    --==================================================
-
-    function Window:NoTabbar(value)
-
-        if state.Destroyed then
-            return
-        end
-
-        if value == nil then
-            state.NoTabbar =
-                not state.NoTabbar
-        else
-            state.NoTabbar =
-                value == true
-        end
-
-        UpdateLayout()
-
-    end
-
-    --==================================================
-    -- NoResize
-    --==================================================
-
-    function Window:NoResize(value)
-
-        if state.Destroyed then
-            return
-        end
-
-        if value == nil then
-            state.NoResize =
-                not state.NoResize
-        else
-            state.NoResize =
-                value == true
-        end
-
-        ResizeCorner.Visible =
-            not state.NoResize
-
-    end
-
-    --==================================================
-    -- NoTopbar
-    --==================================================
-
-    function Window:NoTopbar(value)
-
-        if state.Destroyed then
-            return
-        end
-
-        if value == nil then
-            state.NoTopbar =
-                not state.NoTopbar
-        else
-            state.NoTopbar =
-                value == true
-        end
-
-        UpdateLayout()
-
-    end
-
-    --==================================================
-    -- SetTheme
-    --==================================================
-
-    function Window:SetTheme(themeName)
-
-        if state.Destroyed then
-            return
-        end
-
-        local newTheme =
-            GetTheme(
-                Themes,
-                themeName
-            )
-
-        state.ThemeName =
-            themeName or "Default"
-
-        theme =
-            newTheme
-
-        Window.Theme =
-            newTheme
-
-        WindowFrame.BackgroundColor3 =
-            newTheme.Background
-
-        Topbar.BackgroundColor3 =
-            newTheme.Topbar
-
-        TabButtons.BackgroundColor3 =
-            newTheme.TabContainer
-
-        Background.BackgroundColor3 =
-            newTheme.Background
-
-        TitleLabel.TextColor3 =
-            newTheme.Text
-
-        ToggleButton.TextColor3 =
-            newTheme.Text
-
-        CloseButton.ImageColor3 =
-            newTheme.Text
-
-        ResizeCorner.TextColor3 =
-            newTheme.ResizeCorner
-
-    end
-
-    --==================================================
-    -- Destroy
-    --==================================================
-
-    function Window:Destroy()
-
-        if state.Destroyed then
-            return
-        end
-
-        state.Destroyed = true
-
-        state.Dragging = false
-        state.Resizing = false
-
-        state.DragInput = nil
-        state.ResizeInput = nil
-
-        WindowFrame:Destroy()
-
-    end
-
-    --==================================================
-    -- Button Events
-    --==================================================
-
-    ToggleButton.Activated:Connect(function()
-
-        if state.NoToggle then
-            return
-        end
-
-        Window:Toggle()
-
-    end)
-
-    CloseButton.Activated:Connect(function()
-
-        if state.NoClose then
-            return
-        end
-
-        Window:Destroy()
-
-    end)
-
-    --==================================================
-    -- Initial State
-    --==================================================
-
-    UpdateLayout()
-
-    return Window
+    return self
 end
 
-return WindowModule
+function Window:_updateLayout()
+    if self._destroyed then
+        return
+    end
+
+    local topbarHeight = self.NoTopbarState and 0 or TOPBAR_HEIGHT
+    local tabbarHeight = self.NoTabbarState and 0 or TABBAR_HEIGHT
+
+    self.Topbar.Visible = not self.NoTopbarState
+    self.TabBar.Visible = not self.NoTabbarState
+    self.ToggleButton.Visible = not self.NoToggleState
+    self.CloseButton.Visible = not self.NoCloseState
+    self.ResizeCorner.Visible = not self.NoResizeState
+
+    self.TabBar.Position = UDim2.fromOffset(5, topbarHeight)
+    self.TabBar.Size = UDim2.new(1, -10, 0, tabbarHeight)
+
+    self.Background.Position = UDim2.fromOffset(5, topbarHeight + tabbarHeight)
+    self.Background.Size = UDim2.new(1, -10, 1, -(topbarHeight + tabbarHeight) - 5)
+
+    self.ResizeCorner.Position = UDim2.new(1, -RESIZE_SIZE, 1, -RESIZE_SIZE)
+end
+
+function Window:_connectInteractions()
+    self.ToggleButton.Activated:Connect(function()
+        self:Toggle()
+    end)
+
+    self.CloseButton.Activated:Connect(function()
+        self:Destroy()
+    end)
+
+    self.Topbar.InputBegan:Connect(function(input)
+        if self._destroyed or self._resizing then
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+            and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        self._dragInput = input
+        self._dragging = true
+        self._dragStart = input.Position
+        self._startPosition = self.Instance.Position
+    end)
+
+    self.Topbar.InputEnded:Connect(function(input)
+        if input == self._dragInput then
+            self._dragInput = nil
+            self._dragging = false
+        end
+    end)
+
+    self.ResizeCorner.InputBegan:Connect(function(input)
+        if self._destroyed or self._dragging or self.NoResizeState then
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+            and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        self._resizeInput = input
+        self._resizing = true
+        self._resizeStart = input.Position
+        self._startSize = self.Instance.AbsoluteSize
+    end)
+
+    self.ResizeCorner.InputEnded:Connect(function(input)
+        if input == self._resizeInput then
+            self._resizeInput = nil
+            self._resizing = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if self._destroyed then
+            return
+        end
+
+        if self._dragging then
+            if input.UserInputType ~= Enum.UserInputType.MouseMovement
+                and input.UserInputType ~= Enum.UserInputType.Touch then
+                return
+            end
+
+            if self._dragInput
+                and input.UserInputType == Enum.UserInputType.Touch
+                and input ~= self._dragInput then
+                return
+            end
+
+            local delta = input.Position - self._dragStart
+
+            self.Instance.Position = UDim2.new(
+                self._startPosition.X.Scale,
+                self._startPosition.X.Offset + delta.X,
+                self._startPosition.Y.Scale,
+                self._startPosition.Y.Offset + delta.Y
+            )
+        elseif self._resizing then
+            if input.UserInputType ~= Enum.UserInputType.MouseMovement
+                and input.UserInputType ~= Enum.UserInputType.Touch then
+                return
+            end
+
+            if self._resizeInput
+                and input.UserInputType == Enum.UserInputType.Touch
+                and input ~= self._resizeInput then
+                return
+            end
+
+            local delta = input.Position - self._resizeStart
+            local width = math.max(MIN_SIZE.X, self._startSize.X + delta.X)
+            local height = math.max(MIN_SIZE.Y, self._startSize.Y + delta.Y)
+
+            self.Instance.Size = UDim2.fromOffset(width, height)
+            self._openSize = self.Instance.Size
+        end
+    end)
+end
+
+function Window:Close()
+    if self._destroyed then return end
+    self._openSize = self.Instance.Size
+    self.Instance.Size = UDim2.new(self._openSize.X, 0, 0, TOPBAR_HEIGHT)
+    self._open = false
+    self.ToggleButton.Rotation = -90
+end
+
+function Window:Open()
+    if self._destroyed then return end
+    self.Instance.Size = self._openSize
+    self._open = true
+    self.ToggleButton.Rotation = 0
+end
+
+function Window:Toggle()
+    if self._destroyed then return end
+    if self._open then
+        self:Close()
+    else
+        self:Open()
+    end
+end
+
+function Window:SetTitle(title)
+    if self._destroyed then return end
+    self.Title.Text = tostring(title)
+end
+
+function Window:Destroy()
+    if self._destroyed then return end
+    self._destroyed = true
+    self._dragging = false
+    self._resizing = false
+    self._dragInput = nil
+    self._resizeInput = nil
+    self.Instance:Destroy()
+end
+
+function Window:NoToggle(value)
+    if value == nil then
+        self.NoToggleState = not self.NoToggleState
+    else
+        self.NoToggleState = value == true
+    end
+    self.ToggleButton.Visible = not self.NoToggleState
+end
+
+function Window:NoClose(value)
+    if value == nil then
+        self.NoCloseState = not self.NoCloseState
+    else
+        self.NoCloseState = value == true
+    end
+    self.CloseButton.Visible = not self.NoCloseState
+end
+
+function Window:NoTabbar(value)
+    if value == nil then
+        self.NoTabbarState = not self.NoTabbarState
+    else
+        self.NoTabbarState = value == true
+    end
+    self:_updateLayout()
+end
+
+function Window:NoResize(value)
+    if value == nil then
+        self.NoResizeState = not self.NoResizeState
+    else
+        self.NoResizeState = value == true
+    end
+    self.ResizeCorner.Visible = not self.NoResizeState
+end
+
+function Window:NoTopbar(value)
+    if value == nil then
+        self.NoTopbarState = not self.NoTopbarState
+    else
+        self.NoTopbarState = value == true
+    end
+    self:_updateLayout()
+end
+
+function Window:SetTheme(name, themes)
+    local theme, themeName = getTheme(themes, name)
+
+    self.ThemeName = themeName
+    self.Theme = theme
+
+    self.Instance.ImageColor3 = theme.Background
+    self.Topbar.BackgroundColor3 = theme.Topbar
+    self.TabBar.ImageColor3 = theme.TabContainer
+    self.ToggleButton.TextColor3 = theme.Text
+    self.CloseButton.ImageColor3 = theme.Text
+    self.Title.TextColor3 = theme.Text
+    self.ResizeCorner.TextColor3 = theme.ResizeCorner
+end
+
+return Window
