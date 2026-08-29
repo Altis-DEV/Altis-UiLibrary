@@ -37,88 +37,100 @@ local function Load(Path)
 	return Result
 end
 
---// Core
+--==============================================================
+-- CORE
+--==============================================================
+
 local Core = Load("src/Core.lua")
 
---// Main API
+--==============================================================
+-- MAIN OBJECT
+--==============================================================
+
 local ImGui = {
 	Core = Core,
 	Windows = {},
 
 	Load = Load,
 
-	Animations = {
-		Buttons = {
-			MouseEnter = {
-				BackgroundTransparency = 0.5,
-			},
-
-			MouseLeave = {
-				BackgroundTransparency = 0.7,
-			},
-		},
-
-		Tabs = {
-			MouseEnter = {
-				BackgroundTransparency = 0.5,
-			},
-
-			MouseLeave = {
-				BackgroundTransparency = 1,
-			},
-		},
-
-		Inputs = {
-			MouseEnter = {
-				BackgroundTransparency = 0,
-			},
-
-			MouseLeave = {
-				BackgroundTransparency = 0.5,
-			},
-		},
-
-		WindowBorder = {
-			Selected = {
-				Transparency = 0,
-				Thickness = 1,
-			},
-
-			Deselected = {
-				Transparency = 0.7,
-				Thickness = 1,
-			},
-		},
-	},
-
+	Animations = Core.Animations,
 	Animation = Core.Animation,
-	UIAssetId = Core.UIAssetId,
 
+	UIAssetId = Core.UIAssetId,
 	NoWarnings = Core.NoWarnings,
 }
 
---// Helpers
+--==============================================================
+-- CORE API
+--==============================================================
+
 function ImGui:Warn(...)
 	return Core:Warn(...)
 end
 
-function ImGui:CreateInstance(ClassName, Parent, Properties)
-	return Core:CreateInstance(
-		ClassName,
-		Parent,
-		Properties
+function ImGui:CreateInstance(...)
+	return Core:CreateInstance(...)
+end
+
+function ImGui:Concat(...)
+	return Core:Concat(...)
+end
+
+function ImGui:GetName(...)
+	return Core:GetName(...)
+end
+
+function ImGui:GetPointerPosition(...)
+	return Core:GetPointerPosition(...)
+end
+
+function ImGui:GetAnimation(...)
+	return Core:GetAnimation(...)
+end
+
+function ImGui:Tween(...)
+	return Core:Tween(...)
+end
+
+function ImGui:ApplyAnimations(...)
+	return Core:ApplyAnimations(...)
+end
+
+function ImGui:HeaderAnimate(...)
+	return Core:HeaderAnimate(...)
+end
+
+function ImGui:ApplyColors(...)
+	return Core:ApplyColors(...)
+end
+
+function ImGui:CheckStyles(...)
+	return Core:CheckStyles(...)
+end
+
+function ImGui:MergeMetatables(...)
+	return Core:MergeMetatables(...)
+end
+
+function ImGui:ConnectHover(...)
+	return Core:ConnectHover(...)
+end
+
+function ImGui:ApplyWindowSelectEffect(...)
+	return Core:ApplyWindowSelectEffect(...)
+end
+
+function ImGui:SetWindowProps(...)
+	return Core:SetWindowProps(
+		self.Windows,
+		...
 	)
 end
 
-function ImGui:Concat(List, Separator)
-	return Core:Concat(List, Separator)
-end
+--==============================================================
+-- PREFABS
+--==============================================================
 
-function ImGui:GetPointerPosition()
-	return Core:GetPointerPosition()
-end
-
---// Prefab loading
 function ImGui:FetchUI()
 	local CacheName = "DepsoImGui"
 
@@ -131,12 +143,15 @@ function ImGui:FetchUI()
 	local UI
 
 	if not Core.IsStudio then
-		UI = game:GetObjects(self.UIAssetId)[1]
+		UI = game:GetObjects(
+			self.UIAssetId
+		)[1]
 	else
 		local UIName = "DepsoImGui"
 
 		UI =
 			Core.PlayerGui:FindFirstChild(UIName)
+
 			or script:FindFirstChild(UIName)
 	end
 
@@ -152,21 +167,25 @@ end
 
 local UI = ImGui:FetchUI()
 
-local Prefabs = UI:WaitForChild("Prefabs")
+local Prefabs =
+	UI:WaitForChild("Prefabs")
 
 Prefabs.Visible = false
 
 ImGui.Prefabs = Prefabs
 
---// ScreenGui
-local Parent =
+--==============================================================
+-- SCREEN GUI
+--==============================================================
+
+local GuiParent =
 	Core.IsStudio
 	and Core.PlayerGui
 	or Core.Services.CoreGui
 
 ImGui.ScreenGui = ImGui:CreateInstance(
 	"ScreenGui",
-	Parent,
+	GuiParent,
 	{
 		DisplayOrder = 9999,
 		ResetOnSpawn = false,
@@ -175,7 +194,7 @@ ImGui.ScreenGui = ImGui:CreateInstance(
 
 ImGui.FullScreenGui = ImGui:CreateInstance(
 	"ScreenGui",
-	Parent,
+	GuiParent,
 	{
 		DisplayOrder = 99999,
 		ResetOnSpawn = false,
@@ -183,11 +202,14 @@ ImGui.FullScreenGui = ImGui:CreateInstance(
 	}
 )
 
---// Window
+--==============================================================
+-- WINDOW MODULE
+--==============================================================
+
 local WindowModule =
 	Load("src/Window/init.lua")
 
-ImGui.CreateWindow = function(self, Config)
+function ImGui:CreateWindow(Config)
 	return WindowModule.new(
 		{
 			ImGui = self,
