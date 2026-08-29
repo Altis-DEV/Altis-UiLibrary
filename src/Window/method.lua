@@ -49,10 +49,6 @@ end
 function Methods.Attach(Context, Config, Data)
 	local ImGui = Context.ImGui
 
-	--============================================================
-	-- STATE
-	--============================================================
-
 	Config.Open =
 		Config.Open ~= false
 
@@ -188,7 +184,7 @@ function Methods.Attach(Context, Config, Data)
 	end
 
 	--============================================================
-	-- OPEN
+	-- OPEN / CLOSE
 	--============================================================
 
 	function Config:SetOpen(Open, NoAnimation)
@@ -197,7 +193,6 @@ function Methods.Attach(Context, Config, Data)
 		end
 
 		Open = Open == true
-
 		self.Open = Open
 
 		local WindowSize =
@@ -281,17 +276,19 @@ function Methods.Attach(Context, Config, Data)
 			return self
 		end
 
-		if not TabConfig
-			or not TabConfig.__TabData then
-
+		if not TabConfig then
 			return self
 		end
 
 		local TargetData =
 			TabConfig.__TabData
 
+		if not TargetData then
+			return self
+		end
+
 		--========================================================
-		-- DEACTIVATE OTHER TABS
+		-- DEACTIVATE EVERY OTHER TAB
 		--========================================================
 
 		for _, OtherConfig in next, Data.Tabs do
@@ -314,20 +311,24 @@ function Methods.Attach(Context, Config, Data)
 		TargetData.Content.Visible = true
 
 		--========================================================
-		-- RESET BODY SCROLL
+		-- RESET SCROLL
 		--========================================================
 
 		Data.Body.CanvasPosition =
 			Vector2.zero
 
 		--========================================================
-		-- PAGE ANIMATION
+		-- POSITION
+		--========================================================
+
+		TargetData.Content.Position =
+			UDim2.fromOffset(0, 5)
+
+		--========================================================
+		-- ANIMATION
 		--========================================================
 
 		if not TabConfig.NoAnimation then
-			TargetData.Content.Position =
-				UDim2.fromOffset(0, 5)
-
 			ImGui:Tween(
 				TargetData.Content,
 				{
@@ -335,27 +336,30 @@ function Methods.Attach(Context, Config, Data)
 						UDim2.fromOffset(0, 0),
 				}
 			)
+		else
+			TargetData.Content.Position =
+				UDim2.fromOffset(0, 0)
 		end
 
 		--========================================================
 		-- UPDATE SCROLL
 		--========================================================
 
-		local UpdateScroll =
-			TargetData.Context
-			and TargetData.Context.Load
-
-		local TabMethods =
-			UpdateScroll
-			and TargetData.Context.Load(
+		local TabMethod =
+			Context.Load(
 				"src/Tab/method.lua"
 			)
 
-		if TabMethods then
-			TabMethods.UpdateScroll(
-				TargetData
-			)
-		end
+		TabMethod.UpdateScroll(
+			TargetData
+		)
+
+		--========================================================
+		-- KEEP ACTIVE TAB REACHABLE
+		--========================================================
+
+		self.ActiveTab =
+			TabConfig
 
 		return self
 	end
@@ -422,7 +426,7 @@ function Methods.Attach(Context, Config, Data)
 	end
 
 	--============================================================
-	-- REGISTER INTERACTION
+	-- INTERACTION
 	--============================================================
 
 	function Config:RegisterInteraction(GuiObject)
@@ -437,16 +441,16 @@ function Methods.Attach(Context, Config, Data)
 		return self
 	end
 
-	--============================================================
-	-- UNREGISTER INTERACTION
-	--============================================================
-
 	function Config:UnregisterInteraction(GuiObject)
 		if not GuiObject then
 			return self
 		end
 
-		for Index = #Data.Interactions, 1, -1 do
+		for Index =
+			#Data.Interactions,
+			1,
+			-1 do
+
 			if Data.Interactions[Index]
 				== GuiObject then
 
